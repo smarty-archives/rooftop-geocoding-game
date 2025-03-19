@@ -27,6 +27,7 @@ const (
 	screenHeight    = 480
 	gravity         = 0.5
 	jumpForce       = -12
+	jumpApexHeight  = 140 // todo calculate from jumpForce
 	playerSpeed     = 5
 	playerSize      = 20
 	platformWidth   = 200
@@ -34,21 +35,27 @@ const (
 	platformSpacing = 300
 )
 
+// todo offload previous platforms and add more platforms instead of initializing all at once
+
 func (g *Game) initPlatforms() {
 	rand.Seed(time.Now().UnixNano())
-	maxYDelta := 150.0
-	g.platforms = []Platform{{x: 200, y: screenHeight - 300, width: platformWidth, height: platformHeight}}
-	for i := 1; i < 40; i++ {
+	maxYDeltaTop := 120.0
+	maxYDeltaBottom := 160.0
+	startingPlatformHeight := 300.0
+	startingPlatformX := 200.0
+	startingPlatformY := screenHeight - startingPlatformHeight
+	g.platforms = []Platform{{x: startingPlatformX, y: startingPlatformY, width: platformWidth, height: startingPlatformHeight}}
+	for i := 1; i < 4000; i++ {
 		x := g.platforms[i-1].x
 		y := g.platforms[i-1].y
-		minY := max(y-maxYDelta, playerSize+20)
-		maxY := int(min(screenHeight, y+maxYDelta))
+		minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
+		maxY := int(min(screenHeight-20, y+maxYDeltaBottom))
 		randY := float64(rand.Intn(maxY-int(minY))) + minY
 		g.platforms = append(g.platforms, Platform{
 			y:      randY,
 			x:      x + platformSpacing,
 			width:  platformWidth,
-			height: platformHeight,
+			height: screenHeight - randY,
 		})
 	}
 }
@@ -75,8 +82,9 @@ func (g *Game) Update() error {
 	// Collision with platforms
 	for i := range g.platforms {
 		p := &g.platforms[i]
-		if g.playerY+playerSize >= p.y &&
-			g.playerX+playerSize > p.x && g.playerX < p.x+p.width {
+		playerOnOrLowerThanPlatform := g.playerY+playerSize >= p.y
+		playerInXRangeOfPlatform := g.playerX+playerSize > p.x && g.playerX < p.x+p.width
+		if playerOnOrLowerThanPlatform && playerInXRangeOfPlatform {
 			g.playerY = p.y - playerSize
 			g.velocityY = 0
 			g.isJumping = false
