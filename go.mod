@@ -1,4 +1,4 @@
-module platformer
+module github.com/smarteaston/platformer
 
 go 1.24
 
