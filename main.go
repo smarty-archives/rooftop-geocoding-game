@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"log"
 	"math/rand"
 	"time"
 
@@ -14,12 +15,14 @@ type Platform struct {
 }
 
 type Game struct {
-	playerX   float64
-	playerY   float64
-	velocityY float64
-	isJumping bool
-	platforms []Platform
-	cameraX   float64
+	playerImage  *ebiten.Image
+	playerX      float64
+	playerY      float64
+	playerXSpeed float64
+	velocityY    float64
+	isJumping    bool
+	platforms    []Platform
+	cameraX      float64
 }
 
 const (
@@ -28,8 +31,8 @@ const (
 	gravity         = 0.5
 	jumpForce       = -12
 	jumpApexHeight  = 140 // todo calculate from jumpForce
-	playerSpeed     = 5
-	playerSize      = 20
+	playerSpeed     = .2
+	playerSize      = 40
 	platformWidth   = 200
 	platformHeight  = 10
 	platformSpacing = 300
@@ -62,12 +65,24 @@ func (g *Game) initPlatforms() {
 
 func (g *Game) Update() error {
 	// Move left and right
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.playerX -= playerSpeed
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		if g.playerXSpeed > 0 {
+			g.playerXSpeed = 0
+		}
+		if g.playerXSpeed >= -5 {
+			g.playerXSpeed -= playerSpeed
+		}
+	} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		if g.playerXSpeed < 0 {
+			g.playerXSpeed = 0
+		}
+		if g.playerXSpeed <= 5 {
+			g.playerXSpeed += playerSpeed
+		}
+	} else {
+		g.playerXSpeed *= .8
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.playerX += playerSpeed
-	}
+	g.playerX += g.playerXSpeed
 
 	// Jumping logic
 	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.isJumping {
@@ -111,7 +126,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, p := range g.platforms {
 		ebitenutil.DrawRect(screen, p.x-g.cameraX, p.y, p.width, p.height, color.RGBA{128, 128, 128, 255})
 	}
-	ebitenutil.DrawRect(screen, g.playerX-g.cameraX, g.playerY, playerSize, playerSize, color.White)
+	playerCoor := &ebiten.DrawImageOptions{}
+	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
+	scaleY := playerSize / float64(g.playerImage.Bounds().Dy())
+	playerCoor.GeoM.Scale(scaleX, scaleY)
+	playerCoor.GeoM.Translate(g.playerX-g.cameraX, g.playerY)
+	screen.DrawImage(g.playerImage, playerCoor)
+	//ebitenutil.DrawRect(screen, g.playerX-g.cameraX, g.playerY, playerSize, playerSize, color.White)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -119,7 +140,11 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func main() {
-	game := &Game{playerX: screenWidth / 2, playerY: screenHeight / 2}
+	image, _, err := ebitenutil.NewImageFromFile("assets/guy.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	game := &Game{playerX: screenWidth / 2, playerY: screenHeight / 2, playerImage: image}
 	game.initPlatforms()
 	if err := ebiten.RunGame(game); err != nil {
 		panic(err)
