@@ -1,11 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
-	"math/rand"
 	"strconv"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -13,19 +12,6 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 )
-
-type Platform struct {
-	x, y, width, height float64
-	visited             bool
-}
-
-func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
-	platformColor := colorGray
-	if p.visited {
-		platformColor = colorSmartyBlue
-	}
-	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, p.height, platformColor)
-}
 
 type Game struct {
 	playerImage  *ebiten.Image
@@ -69,24 +55,45 @@ func (g *Game) initPlayer() {
 	g.playerY = 0 // startingPlatformY - playerSize*2
 }
 
+const (
+	maxYDeltaTop    = 120.0
+	maxYDeltaBottom = 160.0
+)
+
 func (g *Game) initPlatforms() {
-	rand.Seed(time.Now().UnixNano())
-	maxYDeltaTop := 120.0
-	maxYDeltaBottom := 160.0
-	g.platforms = []*Platform{{x: startingPlatformX, y: startingPlatformY, width: platformWidth, height: startingPlatformHeight}}
-	for i := 1; i < 4000; i++ {
-		x := g.platforms[i-1].x
-		y := g.platforms[i-1].y
-		minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
-		maxY := int(min(screenHeight-20, y+maxYDeltaBottom))
-		randY := float64(rand.Intn(maxY-int(minY))) + minY
-		g.platforms = append(g.platforms, &Platform{
-			y:      randY,
-			x:      x + platformSpacing,
-			width:  platformWidth,
-			height: screenHeight - randY,
-		})
+	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY)}
+	for i := 1; i < 2; i++ {
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1]))
 	}
+}
+
+func (g *Game) PlatformHandling() {
+	// Generate New
+	if g.DistToLastPlatform() < platformWidth {
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.GetLastPlatform()))
+	}
+	// Cleanup
+	if g.DistToFirstPlatform() > platformSpacing*2 {
+		g.platforms = g.platforms[1:]
+	}
+}
+
+func (g *Game) DistToLastPlatform() float64 {
+	lastPlatform := g.GetLastPlatform()
+	return g.player.GetDist(lastPlatform)
+}
+
+func (g *Game) DistToFirstPlatform() float64 {
+	firstPlatform := g.GetFirstPlatform()
+	return g.player.GetDist(firstPlatform)
+}
+
+func (g *Game) GetLastPlatform() *Platform {
+	return g.platforms[len(g.platforms)-1]
+}
+
+func (g *Game) GetFirstPlatform() *Platform {
+	return g.platforms[0]
 }
 
 func (g *Game) init() {
@@ -116,6 +123,10 @@ func (g *Game) startOver() {
 }
 
 func (g *Game) Update() error {
+	g.PlatformHandling()
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
+		fmt.Printf("Total Platforms: %d\n", len(g.platforms))
+	}
 	// Player fell too low
 	if g.playerY >= screenHeight*2 {
 		g.gameOver = true
