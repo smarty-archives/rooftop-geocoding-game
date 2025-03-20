@@ -14,17 +14,13 @@ import (
 )
 
 type Game struct {
-	playerImage  *ebiten.Image
-	playerX      float64
-	playerY      float64
-	playerXSpeed float64
-	velocityY    float64
-	isJumping    bool
-	platforms    []*Platform
-	cameraX      float64
-	score        int // Score counter
-	gameOver     bool
-	font         font.Face
+	playerImage *ebiten.Image
+	player      Player
+	platforms   []*Platform
+	cameraX     float64
+	score       int // Score counter
+	gameOver    bool
+	font        font.Face
 }
 
 const (
@@ -51,8 +47,8 @@ var (
 // todo offload previous platforms and add more platforms instead of initializing all at once
 
 func (g *Game) initPlayer() {
-	g.playerX = screenWidth/2 - (playerSize / 2)
-	g.playerY = 0 // startingPlatformY - playerSize*2
+	g.player.x = screenWidth/2 - (playerSize / 2)
+	g.player.y = 0 // startingPlatformY - playerSize*2
 }
 
 const (
@@ -105,11 +101,12 @@ func (g *Game) init() {
 }
 
 func (g *Game) resetGameState() {
-	g.playerX = 0
-	g.playerY = 0
-	g.playerXSpeed = 0
-	g.velocityY = 0
-	g.isJumping = false
+	g.player.x = 0
+	g.player.y = 0
+	g.player.xSpeed = 0
+	g.player.velocityY = 0
+	g.player.isJumping = false
+	// getFirstPlatform will panic if you don't initialize the platforms after this
 	g.platforms = g.platforms[:0]
 	g.cameraX = 0
 	g.score = 0
@@ -128,7 +125,7 @@ func (g *Game) Update() error {
 		fmt.Printf("Total Platforms: %d\n", len(g.platforms))
 	}
 	// Player fell too low
-	if g.playerY >= screenHeight*2 {
+	if g.player.y >= screenHeight*2 {
 		g.gameOver = true
 	}
 
@@ -141,7 +138,7 @@ func (g *Game) Update() error {
 	}
 
 	// Store previous X position for side collision correction
-	prevX := g.playerX
+	prevX := g.player.x
 
 	if bot {
 		g.movePlayerRight()
@@ -162,30 +159,30 @@ func (g *Game) Update() error {
 		}
 
 		// Jumping logic
-		if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.isJumping {
+		if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
 			g.jump()
 		}
 	}
 
 	// Apply gravity
-	g.velocityY += gravity
-	g.playerY += g.velocityY
+	g.player.velocityY += gravity
+	g.player.y += g.player.velocityY
 
 	// Platform collision detection (both vertical and side)
 	for _, p := range g.platforms {
 		// Check if player is within platform's horizontal range
-		playerRight := g.playerX + playerSize
-		playerLeft := g.playerX
+		playerRight := g.player.x + playerSize
+		playerLeft := g.player.x
 		platformRight := p.x + p.width
 		platformLeft := p.x
 
 		// **Vertical collision (Landing on platform)**
 		if playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
-			g.playerY+playerSize > p.y && g.playerY+playerSize-g.velocityY <= p.y { // Player is falling onto the platform
+			g.player.y+playerSize > p.y && g.player.y+playerSize-g.player.velocityY <= p.y { // Player is falling onto the platform
 			// Land on the platform
-			g.playerY = p.y - playerSize
-			g.velocityY = 0
-			g.isJumping = false
+			g.player.y = p.y - playerSize
+			g.player.velocityY = 0
+			g.player.isJumping = false
 
 			if !p.visited {
 				p.visited = true
@@ -194,27 +191,27 @@ func (g *Game) Update() error {
 		}
 
 		// **Side collision (Hitting the sides of the platform)**
-		if g.playerY+playerSize > p.y { // Player is below platform surface
+		if g.player.y+playerSize > p.y { // Player is below platform surface
 			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
-				g.playerX = platformLeft - playerSize
-				g.playerXSpeed = 0
+				g.player.x = platformLeft - playerSize
+				g.player.xSpeed = 0
 			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
-				g.playerX = platformRight
-				g.playerXSpeed = 0
+				g.player.x = platformRight
+				g.player.xSpeed = 0
 			}
 		}
 	}
 
 	// todo seems unnecessary now that camera follows the guy
 	// Keep player within screen bounds
-	if g.playerX < g.cameraX {
-		g.playerX = g.cameraX
-	} else if g.playerX+playerSize > g.cameraX+screenWidth {
-		g.playerX = g.cameraX + screenWidth - playerSize
+	if g.player.x < g.cameraX {
+		g.player.x = g.cameraX
+	} else if g.player.x+playerSize > g.cameraX+screenWidth {
+		g.player.x = g.cameraX + screenWidth - playerSize
 	}
 
 	// Move camera horizontally as player moves
-	g.cameraX = g.playerX - screenWidth/2 + playerSize/2
+	g.cameraX = max(g.player.x-screenWidth/2+playerSize/2, g.GetFirstPlatform().x-playerSize)
 	if g.cameraX < 0 {
 		g.cameraX = 0
 	}
@@ -224,7 +221,7 @@ func (g *Game) Update() error {
 
 func (g *Game) botShouldJump(p Platform) bool {
 	pRight := p.x + p.width
-	return pRight-50 < g.playerX && g.playerX < pRight && !g.isJumping
+	return pRight-50 < g.player.x && g.player.x < pRight && !g.player.isJumping
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -273,9 +270,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
 	scaleY := playerSize / float64(g.playerImage.Bounds().Dy())
 	playerCoor.GeoM.Scale(scaleX, scaleY)
-	playerCoor.GeoM.Translate(g.playerX-g.cameraX, g.playerY)
+	playerCoor.GeoM.Translate(g.player.x-g.cameraX, g.player.y)
 	screen.DrawImage(g.playerImage, playerCoor)
-	//ebitenutil.DrawRect(screen, g.playerX-g.cameraX, g.playerY, playerSize, playerSize, color.White)
+	//ebitenutil.DrawRect(screen, g.player.x-g.cameraX, g.player.y, playerSize, playerSize, color.White)
 
 	// Draw score at top left
 	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, color.White)
@@ -286,32 +283,32 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (g *Game) movePlayerLeft() {
-	if g.playerXSpeed > 0 {
-		g.playerXSpeed = 0
+	if g.player.xSpeed > 0 {
+		g.player.xSpeed = 0
 	}
-	if g.playerXSpeed >= -5 {
-		g.playerXSpeed -= playerSpeed
+	if g.player.xSpeed >= -5 {
+		g.player.xSpeed -= playerSpeed
 	}
-	g.playerX += g.playerXSpeed
+	g.player.x += g.player.xSpeed
 }
 
 func (g *Game) movePlayerRight() {
-	if g.playerXSpeed < 0 {
-		g.playerXSpeed = 0
+	if g.player.xSpeed < 0 {
+		g.player.xSpeed = 0
 	}
-	if g.playerXSpeed <= 5 {
-		g.playerXSpeed += playerSpeed
+	if g.player.xSpeed <= 5 {
+		g.player.xSpeed += playerSpeed
 	}
-	g.playerX += g.playerXSpeed
+	g.player.x += g.player.xSpeed
 }
 
 func (g *Game) slowPlayer() {
-	g.playerXSpeed *= .8
+	g.player.xSpeed *= .8
 }
 
 func (g *Game) jump() {
-	g.velocityY = jumpForce
-	g.isJumping = true
+	g.player.velocityY = jumpForce
+	g.player.isJumping = true
 }
 
 func main() {
