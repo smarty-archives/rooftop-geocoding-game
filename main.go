@@ -9,6 +9,9 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
 )
 
 type Platform struct {
@@ -34,6 +37,8 @@ type Game struct {
 	platforms    []*Platform
 	cameraX      float64
 	score        int // Score counter
+	gameOver     bool
+	font         font.Face
 }
 
 const (
@@ -86,6 +91,9 @@ func (g *Game) initPlatforms() {
 func (g *Game) init() {
 	g.initPlatforms()
 	g.initPlayer()
+
+	// Use the default basic font from Ebiten
+	g.font = basicfont.Face7x13
 }
 
 func (g *Game) resetGameState() {
@@ -97,15 +105,28 @@ func (g *Game) resetGameState() {
 	g.platforms = g.platforms[:0]
 	g.cameraX = 0
 	g.score = 0
+	g.gameOver = false
+}
+
+func (g *Game) startOver() {
+	g.resetGameState()
+	g.init()
 }
 
 func (g *Game) Update() error {
 	// Player fell too low
 	if g.playerY >= screenHeight*2 {
-		// Game Over
-		g.resetGameState()
-		g.init()
+		g.gameOver = true
 	}
+
+	// If game over, reset the game when a key is pressed
+	if g.gameOver {
+		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+			g.startOver()
+		}
+		return nil
+	}
+
 	// Store previous X position for side collision correction
 	prevX := g.playerX
 
@@ -191,10 +212,31 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	// If the game is over, display the "Game Over" screen
+	if g.gameOver {
+		// Text to display
+		gameOverText := "That's not a rooftop geocode!"
+		restartText := "Press Enter to Restart"
+
+		// Measure the width of the "Game Over" text
+		gameOverWidth := font.MeasureString(g.font, gameOverText).Ceil()
+		restartWidth := font.MeasureString(g.font, restartText).Ceil()
+
+		// Calculate the X position to center the "Game Over" text
+		gameOverX := (screenWidth - gameOverWidth) / 2
+		restartX := (screenWidth - restartWidth) / 2
+
+		// Draw the "Game Over" text and restart message
+		text.Draw(screen, gameOverText, g.font, gameOverX, 60, color.White)
+		text.Draw(screen, restartText, g.font, restartX, 90, color.White)
+	}
+
+	// Draw the platforms
 	for _, p := range g.platforms {
 		p.Draw(screen, g.cameraX)
 	}
 	// todo move some stuff to init
+	// Draw player
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
 	scaleY := playerSize / float64(g.playerImage.Bounds().Dy())
@@ -204,7 +246,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//ebitenutil.DrawRect(screen, g.playerX-g.cameraX, g.playerY, playerSize, playerSize, color.White)
 
 	// Draw score at top left
-	ebitenutil.DebugPrint(screen, "Score: "+strconv.Itoa(g.score))
+	text.Draw(screen, "Score: "+strconv.Itoa(g.score), g.font, 10, 20, color.White)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
