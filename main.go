@@ -72,6 +72,9 @@ func (g *Game) initPlatforms() {
 }
 
 func (g *Game) Update() error {
+	// Store previous X position for side collision correction
+	prevX := g.playerX
+
 	// Move left and right
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		if g.playerXSpeed > 0 {
@@ -102,14 +105,32 @@ func (g *Game) Update() error {
 	g.velocityY += gravity
 	g.playerY += g.velocityY
 
-	// Collision with platforms
+	// Platform collision detection (both vertical and side)
 	for _, p := range g.platforms {
-		playerOnOrLowerThanPlatform := g.playerY+playerSize >= p.y
-		playerInXRangeOfPlatform := g.playerX+playerSize > p.x && g.playerX < p.x+p.width
-		if playerOnOrLowerThanPlatform && playerInXRangeOfPlatform {
+		// Check if player is within platform's horizontal range
+		playerRight := g.playerX + playerSize
+		playerLeft := g.playerX
+		platformRight := p.x + p.width
+		platformLeft := p.x
+
+		// **Vertical collision (Landing on platform)**
+		if playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
+			g.playerY+playerSize > p.y && g.playerY+playerSize-g.velocityY <= p.y { // Player is falling onto the platform
+			// Land on the platform
 			g.playerY = p.y - playerSize
 			g.velocityY = 0
 			g.isJumping = false
+		}
+
+		// **Side collision (Hitting the sides of the platform)**
+		if g.playerY+playerSize > p.y { // Player is below platform surface
+			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
+				g.playerX = platformLeft - playerSize
+				g.playerXSpeed = 0
+			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
+				g.playerX = platformRight
+				g.playerXSpeed = 0
+			}
 		}
 	}
 
@@ -152,7 +173,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	game := &Game{playerX: screenWidth / 2, playerY: screenHeight / 2, playerImage: image}
+	game := &Game{playerX: screenWidth / 2, playerY: 0, playerImage: image}
 	game.initPlatforms()
 	if err := ebiten.RunGame(game); err != nil {
 		panic(err)
