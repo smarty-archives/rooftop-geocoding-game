@@ -14,6 +14,10 @@ type Platform struct {
 	x, y, width, height float64
 }
 
+func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
+	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, p.height, colorGray)
+}
+
 type Game struct {
 	playerImage  *ebiten.Image
 	playerX      float64
@@ -36,6 +40,10 @@ const (
 	platformWidth   = 200
 	platformHeight  = 10
 	platformSpacing = 300
+)
+
+var (
+	colorGray = color.RGBA{R: 128, G: 128, B: 128, A: 255}
 )
 
 // todo offload previous platforms and add more platforms instead of initializing all at once
@@ -124,7 +132,7 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	for _, p := range g.platforms {
-		ebitenutil.DrawRect(screen, p.x-g.cameraX, p.y, p.width, p.height, color.RGBA{128, 128, 128, 255})
+		p.Draw(screen, g.cameraX)
 	}
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
