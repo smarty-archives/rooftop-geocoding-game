@@ -30,16 +30,18 @@ type Game struct {
 }
 
 const (
-	screenWidth     = 640
-	screenHeight    = 480
-	gravity         = 0.5
-	jumpForce       = -12
-	jumpApexHeight  = 140 // todo calculate from jumpForce
-	playerSpeed     = .2
-	playerSize      = 40
-	platformWidth   = 200
-	platformHeight  = 10
-	platformSpacing = 300
+	screenWidth            = 640
+	screenHeight           = 480
+	gravity                = 0.5
+	jumpForce              = -12
+	jumpApexHeight         = 140 // todo calculate from jumpForce
+	playerSpeed            = .2
+	playerSize             = 40
+	platformWidth          = 200
+	platformSpacing        = 300
+	startingPlatformHeight = 300.0
+	startingPlatformX      = 200.0
+	startingPlatformY      = screenHeight - startingPlatformHeight
 )
 
 var (
@@ -48,13 +50,15 @@ var (
 
 // todo offload previous platforms and add more platforms instead of initializing all at once
 
+func (g *Game) initPlayer() {
+	g.playerX = screenWidth / 2
+	g.playerY = startingPlatformY - playerSize*2
+}
+
 func (g *Game) initPlatforms() {
 	rand.Seed(time.Now().UnixNano())
 	maxYDeltaTop := 120.0
 	maxYDeltaBottom := 160.0
-	startingPlatformHeight := 300.0
-	startingPlatformX := 200.0
-	startingPlatformY := screenHeight - startingPlatformHeight
 	g.platforms = []Platform{{x: startingPlatformX, y: startingPlatformY, width: platformWidth, height: startingPlatformHeight}}
 	for i := 1; i < 4000; i++ {
 		x := g.platforms[i-1].x
@@ -71,7 +75,28 @@ func (g *Game) initPlatforms() {
 	}
 }
 
+func (g *Game) init() {
+	g.initPlatforms()
+	g.initPlayer()
+}
+
+func (g *Game) resetGameState() {
+	g.playerX = 0
+	g.playerY = 0
+	g.playerXSpeed = 0
+	g.velocityY = 0
+	g.isJumping = false
+	g.platforms = g.platforms[:0]
+	g.cameraX = 0
+}
+
 func (g *Game) Update() error {
+	// Player fell too low
+	if g.playerY >= screenHeight*2 {
+		// Game Over
+		g.resetGameState()
+		g.init()
+	}
 	// Store previous X position for side collision correction
 	prevX := g.playerX
 
@@ -155,6 +180,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, p := range g.platforms {
 		p.Draw(screen, g.cameraX)
 	}
+	// todo move some stuff to init
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
 	scaleY := playerSize / float64(g.playerImage.Bounds().Dy())
@@ -173,8 +199,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	game := &Game{playerX: screenWidth / 2, playerY: 0, playerImage: image}
-	game.initPlatforms()
+	game := &Game{playerImage: image}
+	game.init()
 	if err := ebiten.RunGame(game); err != nil {
 		panic(err)
 	}
