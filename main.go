@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -12,10 +13,15 @@ import (
 
 type Platform struct {
 	x, y, width, height float64
+	visited             bool
 }
 
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
-	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, p.height, colorGray)
+	platformColor := colorGray
+	if p.visited {
+		platformColor = colorSmartyBlue
+	}
+	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, p.height, platformColor)
 }
 
 type Game struct {
@@ -25,8 +31,9 @@ type Game struct {
 	playerXSpeed float64
 	velocityY    float64
 	isJumping    bool
-	platforms    []Platform
+	platforms    []*Platform
 	cameraX      float64
+	score        int // Score counter
 }
 
 const (
@@ -40,33 +47,34 @@ const (
 	platformWidth          = 200
 	platformSpacing        = 300
 	startingPlatformHeight = 300.0
-	startingPlatformX      = 200.0
+	startingPlatformX      = (screenWidth / 2) - (platformWidth / 2)
 	startingPlatformY      = screenHeight - startingPlatformHeight
 )
 
 var (
-	colorGray = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorGray       = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
 )
 
 // todo offload previous platforms and add more platforms instead of initializing all at once
 
 func (g *Game) initPlayer() {
-	g.playerX = screenWidth / 2
-	g.playerY = startingPlatformY - playerSize*2
+	g.playerX = screenWidth/2 - (playerSize / 2)
+	g.playerY = 0 // startingPlatformY - playerSize*2
 }
 
 func (g *Game) initPlatforms() {
 	rand.Seed(time.Now().UnixNano())
 	maxYDeltaTop := 120.0
 	maxYDeltaBottom := 160.0
-	g.platforms = []Platform{{x: startingPlatformX, y: startingPlatformY, width: platformWidth, height: startingPlatformHeight}}
+	g.platforms = []*Platform{{x: startingPlatformX, y: startingPlatformY, width: platformWidth, height: startingPlatformHeight}}
 	for i := 1; i < 4000; i++ {
 		x := g.platforms[i-1].x
 		y := g.platforms[i-1].y
 		minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
 		maxY := int(min(screenHeight-20, y+maxYDeltaBottom))
 		randY := float64(rand.Intn(maxY-int(minY))) + minY
-		g.platforms = append(g.platforms, Platform{
+		g.platforms = append(g.platforms, &Platform{
 			y:      randY,
 			x:      x + platformSpacing,
 			width:  platformWidth,
@@ -88,6 +96,7 @@ func (g *Game) resetGameState() {
 	g.isJumping = false
 	g.platforms = g.platforms[:0]
 	g.cameraX = 0
+	g.score = 0
 }
 
 func (g *Game) Update() error {
@@ -145,6 +154,11 @@ func (g *Game) Update() error {
 			g.playerY = p.y - playerSize
 			g.velocityY = 0
 			g.isJumping = false
+
+			if !p.visited {
+				p.visited = true
+				g.score++
+			}
 		}
 
 		// **Side collision (Hitting the sides of the platform)**
@@ -188,6 +202,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	playerCoor.GeoM.Translate(g.playerX-g.cameraX, g.playerY)
 	screen.DrawImage(g.playerImage, playerCoor)
 	//ebitenutil.DrawRect(screen, g.playerX-g.cameraX, g.playerY, playerSize, playerSize, color.White)
+
+	// Draw score at top left
+	ebitenutil.DebugPrint(screen, "Score: "+strconv.Itoa(g.score))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
