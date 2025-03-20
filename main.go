@@ -103,8 +103,7 @@ func (g *Game) Update() error {
 	g.playerY += g.velocityY
 
 	// Collision with platforms
-	for i := range g.platforms {
-		p := &g.platforms[i]
+	for _, p := range g.platforms {
 		playerOnOrLowerThanPlatform := g.playerY+playerSize >= p.y
 		playerInXRangeOfPlatform := g.playerX+playerSize > p.x && g.playerX < p.x+p.width
 		if playerOnOrLowerThanPlatform && playerInXRangeOfPlatform {
@@ -114,6 +113,7 @@ func (g *Game) Update() error {
 		}
 	}
 
+	// todo seems unnecessary now that camera follows the guy
 	// Keep player within screen bounds
 	if g.playerX < g.cameraX {
 		g.playerX = g.cameraX
