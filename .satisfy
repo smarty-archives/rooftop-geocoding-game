@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    {
+      "package_name": "platformer/assets", "package_version": "latest",
+      "remote_address": "gcs://smarty-engineering-scratchpad",
+      "local_directory": "~/.cache/satisfy/platformer"
+    }
+  ]
+}
