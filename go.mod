@@ -1,4 +1,4 @@
-module github.com/smarteaston/platformer
+module github.com/smarty-archives/rooftop-geocoding-game
 
 go 1.24
 
