@@ -27,9 +27,7 @@ const (
 	screenWidth            = 640
 	screenHeight           = 480
 	gravity                = 0.5
-	jumpForce              = -12
 	jumpApexHeight         = 140 // todo calculate from jumpForce
-	playerSpeed            = .2
 	playerSize             = 40
 	platformWidth          = 200
 	platformSpacing        = 300
@@ -44,11 +42,14 @@ var (
 	bot             = false
 )
 
-// todo offload previous platforms and add more platforms instead of initializing all at once
-
 func (g *Game) initPlayer() {
-	g.player.x = screenWidth/2 - (playerSize / 2)
-	g.player.y = 0 // startingPlatformY - playerSize*2
+	jumpForce := -12.0
+	playerSpeed := 0.2
+	maxPlayerSpeed := 5.0
+
+	g.player.SetX(screenWidth/2 - (playerSize / 2))
+	g.player.SetY(0)
+	g.player.SetStats(jumpForce, playerSpeed, maxPlayerSpeed)
 }
 
 const (
@@ -100,13 +101,9 @@ func (g *Game) init() {
 	g.font = basicfont.Face7x13
 }
 
+// WARNING: GetFirstPlatform will panic if you don't initialize the platforms after this
 func (g *Game) resetGameState() {
-	g.player.x = 0
-	g.player.y = 0
-	g.player.xSpeed = 0
-	g.player.velocityY = 0
-	g.player.isJumping = false
-	// getFirstPlatform will panic if you don't initialize the platforms after this
+	g.player.Reset()
 	g.platforms = g.platforms[:0]
 	g.cameraX = 0
 	g.score = 0
@@ -121,15 +118,18 @@ func (g *Game) startOver() {
 
 func (g *Game) Update() error {
 	g.PlatformHandling()
+
+	// Debug
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		fmt.Printf("Total Platforms: %d\n", len(g.platforms))
 	}
+
 	// Player fell too low
 	if g.player.y >= screenHeight*2 {
 		g.gameOver = true
 	}
 
-	// If game over, reset the game when a key is pressed
+	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 			g.startOver()
@@ -141,26 +141,26 @@ func (g *Game) Update() error {
 	prevX := g.player.x
 
 	if bot {
-		g.movePlayerRight()
+		g.player.MoveRight()
 		for _, p := range g.platforms {
 			if g.botShouldJump(*p) {
-				g.jump()
+				g.player.Jump()
 			}
 
 		}
 	} else {
 		// Move left and right
 		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-			g.movePlayerLeft()
+			g.player.MoveLeft()
 		} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-			g.movePlayerRight()
+			g.player.MoveRight()
 		} else {
 			g.slowPlayer()
 		}
 
 		// Jumping logic
 		if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
-			g.jump()
+			g.player.Jump()
 		}
 	}
 
@@ -194,15 +194,14 @@ func (g *Game) Update() error {
 		if g.player.y+playerSize > p.y { // Player is below platform surface
 			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
 				g.player.x = platformLeft - playerSize
-				g.player.xSpeed = 0
+				g.player.velocityX = 0
 			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
 				g.player.x = platformRight
-				g.player.xSpeed = 0
+				g.player.velocityX = 0
 			}
 		}
 	}
 
-	// todo seems unnecessary now that camera follows the guy
 	// Keep player within screen bounds
 	if g.player.x < g.cameraX {
 		g.player.x = g.cameraX
@@ -282,33 +281,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
-func (g *Game) movePlayerLeft() {
-	if g.player.xSpeed > 0 {
-		g.player.xSpeed = 0
-	}
-	if g.player.xSpeed >= -5 {
-		g.player.xSpeed -= playerSpeed
-	}
-	g.player.x += g.player.xSpeed
-}
-
-func (g *Game) movePlayerRight() {
-	if g.player.xSpeed < 0 {
-		g.player.xSpeed = 0
-	}
-	if g.player.xSpeed <= 5 {
-		g.player.xSpeed += playerSpeed
-	}
-	g.player.x += g.player.xSpeed
-}
-
 func (g *Game) slowPlayer() {
-	g.player.xSpeed *= .8
-}
-
-func (g *Game) jump() {
-	g.player.velocityY = jumpForce
-	g.player.isJumping = true
+	g.player.velocityX *= .8
 }
 
 func main() {

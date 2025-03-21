@@ -15,6 +15,10 @@ type Pos struct {
 	x, y float64
 }
 
+func NewPos(x, y float64) *Pos {
+	return &Pos{x, y}
+}
+
 func (p *Pos) GetPos() Pos {
 	return *p
 }
@@ -37,10 +41,6 @@ func (p *Pos) SetX(x float64) {
 
 func (p *Pos) SetY(y float64) {
 	p.y = y
-}
-
-func NewPos(x, y float64) *Pos {
-	return &Pos{x, y}
 }
 
 func (p *Pos) GetDist(other Poser) float64 {
