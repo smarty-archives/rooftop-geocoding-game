@@ -1,12 +1,19 @@
-package main
+package game
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/smarty-archives/rooftop-geocoding-game/game"
-)
+	"fmt"
+	"image/color"
+	"log"
+	"os"
+	"strconv"
 
-//go:embed "static/assets/music/background-loop-melodic-techno-02-2690.mp3"
-var bgmData []byte
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+)
 
 type Game struct {
 	player    *Player
@@ -79,13 +86,10 @@ func (g *Game) GetFirstPlatform() *Platform {
 }
 
 func NewGame() *Game {
-	image, _, err := ebitenutil.NewImageFromFile("assets/images/guy0.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	cueMusic()
 	g := &Game{}
 	g.initPlatforms()
-	g.player = NewPlayer(image)
+	g.player = NewPlayer()
 
 	// Use the default basic font from Ebiten
 	g.font = basicfont.Face7x13
@@ -217,6 +221,7 @@ func (g *Game) botShouldJump(p Platform) bool {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(color.White)
 	// If the game is over, display the "Game Over" screen
 	if g.gameOver {
 		// Text to display
@@ -273,40 +278,36 @@ func (g *Game) slowPlayer() {
 	g.player.velocityX *= .8
 }
 
+var audioContext *audio.Context
+
 func cueMusic() {
-	var audioContext *audio.Context
 	var player *audio.Player
 	audioContext = audio.NewContext(sampleRate)
 
-	// Decode the MP3 file
-	stream, err := mp3.DecodeWithSampleRate(sampleRate, bytes.NewReader(bgmData))
+	// Open the file
+	file, err := os.Open("static/assets/music/background-loop-melodic-techno-02-2690.mp3")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Decode the MP3 file
+	stream, err := mp3.DecodeWithSampleRate(sampleRate, file)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Create an audio player
 	player, err = audio.NewPlayer(audioContext, stream)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Loop the music
 	player.Play()
 	go func() {
 		for {
-			if player.IsPlaying() {
-				continue
+			if !player.IsPlaying() {
+				player.Rewind()
+				player.Play()
 			}
-			player.Rewind()
-			player.Play()
 		}
 	}()
-}
-
-func main() {
-	cueMusic()
-	game := NewGame()
-	if err := ebiten.RunGame(game); err != nil {
-		panic(err)
-	}
 }

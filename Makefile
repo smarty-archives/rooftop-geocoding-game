@@ -1,4 +1,5 @@
 data:
+	rm -r static/
 	cat .satisfy | satisfy
 	mkdir -p static/assets
 	cp -r ~/.cache/satisfy/platformer/* static/assets
@@ -8,5 +9,6 @@ compile: data
 serve: compile
 	go run http/main.go
 run: compile
+	rm -r assets
 	cp -r static/assets .
 	go run *.go
