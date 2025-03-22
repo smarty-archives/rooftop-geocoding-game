@@ -1,9 +1,9 @@
 data:
 	cat .satisfy | satisfy
-compile: data
 	mkdir -p static/assets
-	GOOS=js GOARCH=wasm go build -o static/main.wasm
-	cp ~/.cache/satisfy/platformer/* static/assets
+	cp -r ~/.cache/satisfy/platformer/* static/assets
 	cp files/* static/
+compile: data
+	GOOS=js GOARCH=wasm go build -o static/main.wasm
 serve: compile
 	go run http/main.go

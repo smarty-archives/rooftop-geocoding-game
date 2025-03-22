@@ -14,13 +14,12 @@ import (
 )
 
 type Game struct {
-	playerImage *ebiten.Image
-	player      Player
-	platforms   []*Platform
-	cameraX     float64
-	score       int // Score counter
-	gameOver    bool
-	font        font.Face
+	player    *Player
+	platforms []*Platform
+	cameraX   float64
+	score     int // Score counter
+	gameOver  bool
+	font      font.Face
 }
 
 const (
@@ -41,16 +40,6 @@ var (
 	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
 	bot             = false
 )
-
-func (g *Game) initPlayer() {
-	jumpForce := -12.0
-	playerSpeed := 0.2
-	maxPlayerSpeed := 5.0
-
-	g.player.SetX(screenWidth/2 - (playerSize / 2))
-	g.player.SetY(0)
-	g.player.SetStats(jumpForce, playerSpeed, maxPlayerSpeed)
-}
 
 const (
 	maxYDeltaTop    = 120.0
@@ -93,12 +82,19 @@ func (g *Game) GetFirstPlatform() *Platform {
 	return g.platforms[0]
 }
 
-func (g *Game) init() {
+func NewGame() *Game {
+	image, _, err := ebitenutil.NewImageFromFile("assets/images/guy0.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	g := &Game{}
 	g.initPlatforms()
-	g.initPlayer()
+	g.player = NewPlayer(image)
 
 	// Use the default basic font from Ebiten
 	g.font = basicfont.Face7x13
+
+	return g
 }
 
 // WARNING: GetFirstPlatform will panic if you don't initialize the platforms after this
@@ -112,7 +108,8 @@ func (g *Game) resetGameState() {
 
 func (g *Game) startOver() {
 	g.resetGameState()
-	g.init()
+	g.player.ResetPlayer()
+	g.initPlatforms()
 	bot = true
 }
 
@@ -265,12 +262,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	// todo move some stuff to init
 	// Draw player
-	playerCoor := &ebiten.DrawImageOptions{}
-	scaleX := playerSize / float64(g.playerImage.Bounds().Dx())
-	scaleY := playerSize / float64(g.playerImage.Bounds().Dy())
-	playerCoor.GeoM.Scale(scaleX, scaleY)
-	playerCoor.GeoM.Translate(g.player.x-g.cameraX, g.player.y)
-	screen.DrawImage(g.playerImage, playerCoor)
+	g.player.Draw(screen, g.cameraX)
 	//ebitenutil.DrawRect(screen, g.player.x-g.cameraX, g.player.y, playerSize, playerSize, color.White)
 
 	// Draw score at top left
@@ -286,12 +278,7 @@ func (g *Game) slowPlayer() {
 }
 
 func main() {
-	image, _, err := ebitenutil.NewImageFromFile("assets/guy.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	game := &Game{playerImage: image}
-	game.init()
+	game := NewGame()
 	if err := ebiten.RunGame(game); err != nil {
 		panic(err)
 	}

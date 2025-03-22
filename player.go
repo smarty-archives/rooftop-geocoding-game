@@ -1,5 +1,7 @@
 package main
 
+import "github.com/hajimehoshi/ebiten/v2"
+
 const (
 	left  = -1
 	right = 1
@@ -35,6 +37,36 @@ type Player struct {
 	velocityX float64
 	velocityY float64
 	isJumping bool
+	image     *ebiten.Image
+}
+
+const (
+	startingJumpForce      = -12.0
+	startingPlayerSpeed    = 0.2
+	startingMaxPlayerSpeed = 5.0
+)
+
+func NewPlayer(image *ebiten.Image) *Player {
+	return &Player{
+		Pos: Pos{
+			x: screenWidth/2 - (playerSize / 2),
+			y: 0,
+		},
+		Stats: Stats{
+			jumpForce:      startingJumpForce,
+			playerSpeed:    startingPlayerSpeed,
+			maxPlayerSpeed: startingMaxPlayerSpeed,
+		},
+		image: image,
+	}
+}
+
+func (p *Player) ResetPlayer() {
+	p.x = screenWidth/2 - (playerSize / 2)
+	p.y = 0
+	p.jumpForce = startingJumpForce
+	p.playerSpeed = startingPlayerSpeed
+	p.maxPlayerSpeed = startingMaxPlayerSpeed
 }
 
 func (p *Player) Reset() {
@@ -67,4 +99,13 @@ func (p *Player) SetStats(jumpForce, playerSpeed, maxPlayerSpeed float64) {
 	p.SetJumpForce(jumpForce)
 	p.SetPlayerSpeed(playerSpeed)
 	p.SetMaxPlayerSpeed(maxPlayerSpeed)
+}
+
+func (p *Player) Draw(screen *ebiten.Image, cameraX float64) {
+	playerCoor := &ebiten.DrawImageOptions{}
+	scaleX := playerSize / float64(p.image.Bounds().Dx())
+	scaleY := playerSize / float64(p.image.Bounds().Dy())
+	playerCoor.GeoM.Scale(scaleX, scaleY)
+	playerCoor.GeoM.Translate(p.x-cameraX, p.y)
+	screen.DrawImage(p.image, playerCoor)
 }
