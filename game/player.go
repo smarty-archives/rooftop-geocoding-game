@@ -18,12 +18,11 @@ const (
 type Player struct {
 	Pos
 	Stats
-	velocityX        float64
-	velocityY        float64
-	isJumping        bool
-	image            *ebiten.Image
-	imageNum         int
-	animationCounter int
+	velocityX float64
+	velocityY float64
+	isJumping bool
+	animation PlayerAnimationState
+	image     *ebiten.Image
 }
 
 func NewPlayer() *Player {
@@ -43,6 +42,7 @@ func (p *Player) ResetPlayer() {
 		panic(err)
 	}
 	p.image = image
+	p.animation = &IdleState{}
 }
 
 func (p *Player) Reset() {
@@ -82,22 +82,25 @@ func (p *Player) Draw(screen *ebiten.Image, cameraX float64) {
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(p.image.Bounds().Dx())
 	scaleY := playerSize / float64(p.image.Bounds().Dy())
+	x := p.x - cameraX
+	if p.velocityX < 0 {
+		scaleX = -scaleX
+		//playerCoor.GeoM.Translate(playerSize, 0)
+		x += playerSize
+	}
 	playerCoor.GeoM.Scale(scaleX, scaleY)
-	playerCoor.GeoM.Translate(p.x-cameraX, p.y)
+	playerCoor.GeoM.Translate(x, p.y)
 	screen.DrawImage(p.image, playerCoor)
 }
 
 func (p *Player) cycleImage() {
-	if p.animationCounter > 0 {
-		p.animationCounter--
+	if !p.animation.shouldAnimate() {
 		return
 	}
-	p.animationCounter = 10
-	p.imageNum++
-	if p.imageNum >= media.NumPlayerImages {
-		p.imageNum = 0
-	}
-	image, err := media.Instance.LoadPlayerImage(p.imageNum)
+	p.animation = p.animation.getNextState(p)
+	p.animation.doState(p)
+
+	image, err := media.Instance.LoadPlayerImage(p.animation.getImageNum())
 	if err != nil {
 		log.Fatal(err)
 	}
