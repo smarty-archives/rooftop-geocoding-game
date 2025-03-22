@@ -57,7 +57,7 @@ func (p *Player) Jump() {
 	p.isJumping = true
 }
 
-func (p *Player) Move(dir float64) {
+func (p *Player) Accelerate(dir float64) {
 	if dir*p.velocityX < 0 {
 		p.velocityX = 0
 	}
@@ -67,9 +67,9 @@ func (p *Player) Move(dir float64) {
 	p.x += p.velocityX
 }
 
-func (p *Player) MoveLeft() { p.Move(left) }
+func (p *Player) AccelerateLeft() { p.Accelerate(left) }
 
-func (p *Player) MoveRight() { p.Move(right) }
+func (p *Player) AccelerateRight() { p.Accelerate(right) }
 
 func (p *Player) SetStats(jumpForce, playerSpeed, maxPlayerSpeed float64) {
 	p.SetJumpForce(jumpForce)

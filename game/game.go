@@ -41,12 +41,12 @@ const (
 var (
 	colorGray       = color.RGBA{R: 128, G: 128, B: 128, A: 255}
 	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
+	colorText       = color.Black
 	bot             = false
 )
 
 const (
-	maxYDeltaTop    = 120.0
-	maxYDeltaBottom = 160.0
+	maxYDeltaTop = 120.0
 )
 
 func (g *Game) initPlatforms() {
@@ -138,27 +138,9 @@ func (g *Game) Update() error {
 	prevX := g.player.x
 
 	if bot {
-		g.player.MoveRight()
-		for _, p := range g.platforms {
-			if g.botShouldJump(*p) {
-				g.player.Jump()
-			}
-
-		}
+		g.botLogic()
 	} else {
-		// Move left and right
-		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-			g.player.MoveLeft()
-		} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-			g.player.MoveRight()
-		} else {
-			g.slowPlayer()
-		}
-
-		// Jumping logic
-		if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
-			g.player.Jump()
-		}
+		g.playerControls()
 	}
 
 	// Apply gravity
@@ -199,7 +181,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// Keep player within screen bounds
+	// Keep player within screen bounds (on sides)
 	if g.player.x < g.cameraX {
 		g.player.x = g.cameraX
 	} else if g.player.x+playerSize > g.cameraX+screenWidth {
@@ -215,7 +197,38 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) botShouldJump(p Platform) bool {
+func (g *Game) botLogic() {
+	g.player.AccelerateRight()
+	for i, p := range g.platforms {
+		if i < len(g.platforms)-1 {
+			if g.botShouldJump(*p, *g.platforms[i+1]) {
+				g.player.Jump()
+			}
+		}
+
+	}
+}
+
+func (g *Game) playerControls() {
+	// Accelerate left and right
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		g.player.AccelerateLeft()
+	} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		g.player.AccelerateRight()
+	} else {
+		g.slowPlayer()
+	}
+
+	// Jumping logic
+	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
+		g.player.Jump()
+	}
+}
+
+func (g *Game) botShouldJump(p, nextP Platform) bool {
+	if p.y+50 < nextP.y {
+		return false
+	}
 	pRight := p.x + p.width
 	return pRight-50 < g.player.x && g.player.x < pRight && !g.player.isJumping
 }
@@ -237,8 +250,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		restartX := (screenWidth - restartWidth) / 2
 
 		// Draw the "Game Over" text and restart message
-		text.Draw(screen, gameOverText, g.font, gameOverX, 60, color.White)
-		text.Draw(screen, restartText, g.font, restartX, 90, color.White)
+		text.Draw(screen, gameOverText, g.font, gameOverX, 60, colorText)
+		text.Draw(screen, restartText, g.font, restartX, 90, colorText)
 	}
 	if bot {
 		botText := "You can't be trusted to do it yourself."
@@ -253,8 +266,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		botX2 := (screenWidth - botWidth2) / 2
 
 		// Draw the "Game Over" text and restart message
-		text.Draw(screen, botText, g.font, botX, 60, color.White)
-		text.Draw(screen, botText2, g.font, botX2, 80, color.White)
+		text.Draw(screen, botText, g.font, botX, 60, colorText)
+		text.Draw(screen, botText2, g.font, botX2, 80, colorText)
 	}
 
 	// Draw the platforms
@@ -267,7 +280,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//ebitenutil.DrawRect(screen, g.player.x-g.cameraX, g.player.y, playerSize, playerSize, color.White)
 
 	// Draw score at top left
-	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, color.White)
+	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {

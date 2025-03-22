@@ -24,9 +24,17 @@ func GenerateNewRandomPlatform(prevPlatform *Platform) *Platform {
 	x := prevPlatform.x
 	y := prevPlatform.y
 	minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
-	maxY := int(min(screenHeight-20, y+maxYDeltaBottom))
-	randY := float64(rand.Intn(maxY-int(minY))) + minY
+	maxY := float64(screenHeight - 20)
+	//randY := pickOne(minY, y+49)
+	randY := float64(rand.Intn(int(maxY)-int(minY))) + minY
 	return NewPlatform(x+platformSpacing, randY)
+}
+
+func pickOne(a, b float64) float64 {
+	if rand.Intn(2) == 0 {
+		return a
+	}
+	return b
 }
 
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
