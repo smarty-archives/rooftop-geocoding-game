@@ -7,3 +7,6 @@ compile: data
 	GOOS=js GOARCH=wasm go build -o static/main.wasm
 serve: compile
 	go run http/main.go
+run: compile
+	cp -r static/assets .
+	go run *.go

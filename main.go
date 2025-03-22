@@ -1,17 +1,24 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"image/color"
 	"log"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 )
+
+//go:embed "static/assets/music/background-loop-melodic-techno-02-2690.mp3"
+var bgmData []byte
 
 type Game struct {
 	player    *Player
@@ -23,6 +30,7 @@ type Game struct {
 }
 
 const (
+	sampleRate             = 44100 // Standard audio sample rate
 	screenWidth            = 640
 	screenHeight           = 480
 	gravity                = 0.5
@@ -277,7 +285,38 @@ func (g *Game) slowPlayer() {
 	g.player.velocityX *= .8
 }
 
+func cueMusic() {
+	var audioContext *audio.Context
+	var player *audio.Player
+	audioContext = audio.NewContext(sampleRate)
+
+	// Decode the MP3 file
+	stream, err := mp3.DecodeWithSampleRate(sampleRate, bytes.NewReader(bgmData))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an audio player
+	player, err = audio.NewPlayer(audioContext, stream)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Loop the music
+	player.Play()
+	go func() {
+		for {
+			if player.IsPlaying() {
+				continue
+			}
+			player.Rewind()
+			player.Play()
+		}
+	}()
+}
+
 func main() {
+	cueMusic()
 	game := NewGame()
 	if err := ebiten.RunGame(game); err != nil {
 		panic(err)
