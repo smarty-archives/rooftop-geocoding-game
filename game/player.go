@@ -1,6 +1,11 @@
 package game
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"log"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/smarty-archives/rooftop-geocoding-game/media"
+)
 
 const (
 	left                   = -1
@@ -9,30 +14,6 @@ const (
 	startingPlayerSpeed    = 0.2
 	startingMaxPlayerSpeed = 5.0
 )
-
-type Stats struct {
-	jumpForce      float64
-	playerSpeed    float64
-	maxPlayerSpeed float64
-}
-
-func (p *Stats) SetJumpForce(jumpForce float64) {
-	p.jumpForce = jumpForce
-}
-
-func (p *Stats) SetPlayerSpeed(playerSpeed float64) {
-	p.playerSpeed = playerSpeed
-}
-
-func (p *Stats) SetMaxPlayerSpeed(maxPlayerSpeed float64) {
-	p.maxPlayerSpeed = maxPlayerSpeed
-}
-
-func (p *Stats) GetJumpForce() float64 { return p.jumpForce }
-
-func (p *Stats) GetPlayerSpeed() float64 { return p.playerSpeed }
-
-func (p *Stats) GetMaxPlayerSpeed() float64 { return p.maxPlayerSpeed }
 
 type Player struct {
 	Pos
@@ -45,25 +26,10 @@ type Player struct {
 	animationCounter int
 }
 
-const (
-	startingJumpForce      = -12.0
-	startingPlayerSpeed    = 0.2
-	startingMaxPlayerSpeed = 5.0
-)
-
-func NewPlayer(image *ebiten.Image) *Player {
-	return &Player{
-		Pos: Pos{
-			x: screenWidth/2 - (playerSize / 2),
-			y: 0,
-		},
-		Stats: Stats{
-			jumpForce:      startingJumpForce,
-			playerSpeed:    startingPlayerSpeed,
-			maxPlayerSpeed: startingMaxPlayerSpeed,
-		},
-		image: image,
-	}
+func NewPlayer() *Player {
+	p := &Player{}
+	p.ResetPlayer()
+	return p
 }
 
 func (p *Player) ResetPlayer() {
@@ -72,6 +38,11 @@ func (p *Player) ResetPlayer() {
 	p.jumpForce = startingJumpForce
 	p.playerSpeed = startingPlayerSpeed
 	p.maxPlayerSpeed = startingMaxPlayerSpeed
+	image, err := media.Instance.LoadPlayerImage(0)
+	if err != nil {
+		panic(err)
+	}
+	p.image = image
 }
 
 func (p *Player) Reset() {
