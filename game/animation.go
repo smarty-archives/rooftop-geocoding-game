@@ -40,6 +40,9 @@ type IdleState struct {
 }
 
 func (state *IdleState) getNextState(player *Player) PlayerAnimationState {
+	if player.isJumping {
+		return &JumpingState{}
+	}
 	if math.Abs(player.velocityX) < hesRunning {
 		return state
 	}
@@ -54,6 +57,9 @@ type RunningState struct {
 }
 
 func (state *RunningState) getNextState(player *Player) PlayerAnimationState {
+	if player.isJumping {
+		return &JumpingState{}
+	}
 	if math.Abs(player.velocityX) < hesRunning {
 		return &IdleState{}
 	}
@@ -61,6 +67,33 @@ func (state *RunningState) getNextState(player *Player) PlayerAnimationState {
 }
 
 func (state *RunningState) doState(player *Player) {
+	state.imageNum++
+	if state.imageNum >= media.NumPlayerImages {
+		state.imageNum = 0
+	}
+}
+
+type JumpingState struct {
+	BaseAnimationState
+}
+
+func (state *JumpingState) getNextState(player *Player) PlayerAnimationState {
+	if !player.isJumping {
+		return &RunningState{}
+	}
+	return state
+}
+
+func (state *JumpingState) shouldAnimate() bool {
+	if state.animationCounter > 0 {
+		state.animationCounter--
+		return false
+	}
+	state.animationCounter = 9
+	return true
+}
+
+func (state *JumpingState) doState(player *Player) {
 	state.imageNum++
 	if state.imageNum >= media.NumPlayerImages {
 		state.imageNum = 0

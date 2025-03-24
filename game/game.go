@@ -128,7 +128,7 @@ func (g *Game) Update() error {
 	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
-			if g.player.x < startingPlatformX {
+			if g.player.x < g.GetFirstPlatform().GetX() {
 				bot = true
 			}
 			g.startOver()

@@ -1,4 +1,5 @@
 data:
+	mkdir -p static
 	rm -r static/
 	cat .satisfy | satisfy
 	mkdir -p static/assets
