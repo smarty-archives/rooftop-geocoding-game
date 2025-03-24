@@ -86,7 +86,7 @@ func (g *Game) GetFirstPlatform() *Platform {
 }
 
 func NewGame() *Game {
-	cueMusic()
+	//cueMusic()
 	g := &Game{}
 	g.initPlatforms()
 	g.player = NewPlayer()
@@ -298,7 +298,7 @@ func cueMusic() {
 	audioContext = audio.NewContext(sampleRate)
 
 	// Open the file
-	file, err := os.Open("static/assets/music/background-loop-melodic-techno-02-2690.mp3")
+	file, err := os.Open("assets/music/background-loop-melodic-techno-02-2690.mp3")
 	if err != nil {
 		log.Fatal(err)
 	}
