@@ -47,13 +47,15 @@ func playAudio() {
 		log.Fatal(err)
 	}
 
-	// Create an audio player
-	player, err = audio.NewPlayer(audioContext, stream)
+	// Wrap the stream in an infinite loop so it repeats
+	loop := audio.NewInfiniteLoop(stream, stream.Length())
+
+	// Create an audio player using the looped stream
+	player, err = audio.NewPlayer(audioContext, loop)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Autoplay won't work in browsers; JavaScript needs to trigger play
-	player.Rewind()
+	// Play the looped audio
 	player.Play()
 }

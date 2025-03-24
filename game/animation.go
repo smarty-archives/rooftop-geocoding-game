@@ -24,7 +24,7 @@ func (bas *BaseAnimationState) shouldAnimate() bool {
 		bas.animationCounter--
 		return false
 	}
-	bas.animationCounter = 4
+	bas.animationCounter = 6
 	return true
 }
 
