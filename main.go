@@ -26,16 +26,20 @@ var (
 )
 
 func main() {
+	wasmAudio()
+	g := game.NewGame()
+	if err := ebiten.RunGame(g); err != nil {
+		panic(err)
+	}
+}
+
+func wasmAudio() {
 	js.Global().Get("document").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if player == nil || !player.IsPlaying() {
 			playAudio()
 		}
 		return nil
 	}))
-	g := game.NewGame()
-	if err := ebiten.RunGame(g); err != nil {
-		panic(err)
-	}
 }
 
 func playAudio() {

@@ -18,11 +18,12 @@ const (
 type Player struct {
 	Pos
 	Stats
-	velocityX float64
-	velocityY float64
-	isJumping bool
-	animation PlayerAnimationState
-	image     *ebiten.Image
+	velocityX       float64
+	velocityY       float64
+	isJumping       bool
+	framesSinceJump int
+	animation       PlayerAnimationState
+	image           *ebiten.Image
 }
 
 func NewPlayer() *Player {
@@ -50,6 +51,7 @@ func (p *Player) Reset() {
 	p.velocityX = 0
 	p.velocityY = 0
 	p.isJumping = false
+	p.framesSinceJump = 0
 }
 
 func (p *Player) Jump() {

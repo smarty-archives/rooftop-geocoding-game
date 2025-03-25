@@ -3,16 +3,36 @@ package game
 import (
 	"fmt"
 	"image/color"
-	"log"
-	"os"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/audio"
-	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
+)
+
+const (
+	screenWidth            = 640
+	screenHeight           = 480
+	playerSize             = 40
+	platformWidth          = 200
+	platformSpacing        = 300
+	maxYDeltaTop           = 120
+	startingPlatformHeight = 300
+	jumpApexHeight         = 140 // todo calculate from jumpForce
+	startingPlatformX      = (screenWidth / 2) - (platformWidth / 2)
+	startingPlatformY      = screenHeight - startingPlatformHeight
+	lightGravity           = 0.5
+	gravity                = 0.6
+	heavyGravity           = 0.7
+	framesWithLightGravity = 20
+)
+
+var (
+	colorGray       = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
+	colorText       = color.Black
+	bot             = false
 )
 
 type Game struct {
@@ -24,69 +44,7 @@ type Game struct {
 	font      font.Face
 }
 
-const (
-	sampleRate             = 44100 // Standard audio sample rate
-	screenWidth            = 640
-	screenHeight           = 480
-	gravity                = 0.5
-	jumpApexHeight         = 140 // todo calculate from jumpForce
-	playerSize             = 40
-	platformWidth          = 200
-	platformSpacing        = 300
-	startingPlatformHeight = 300.0
-	startingPlatformX      = (screenWidth / 2) - (platformWidth / 2)
-	startingPlatformY      = screenHeight - startingPlatformHeight
-)
-
-var (
-	colorGray       = color.RGBA{R: 128, G: 128, B: 128, A: 255}
-	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText       = color.Black
-	bot             = false
-)
-
-const (
-	maxYDeltaTop = 120.0
-)
-
-func (g *Game) initPlatforms() {
-	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY)}
-	for i := 1; i < 2; i++ {
-		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1]))
-	}
-}
-
-func (g *Game) PlatformHandling() {
-	// Generate New
-	if g.DistToLastPlatform() < platformWidth {
-		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.GetLastPlatform()))
-	}
-	// Cleanup
-	if g.DistToFirstPlatform() > platformSpacing*2 {
-		g.platforms = g.platforms[1:]
-	}
-}
-
-func (g *Game) DistToLastPlatform() float64 {
-	lastPlatform := g.GetLastPlatform()
-	return g.player.GetDist(lastPlatform)
-}
-
-func (g *Game) DistToFirstPlatform() float64 {
-	firstPlatform := g.GetFirstPlatform()
-	return g.player.GetDist(firstPlatform)
-}
-
-func (g *Game) GetLastPlatform() *Platform {
-	return g.platforms[len(g.platforms)-1]
-}
-
-func (g *Game) GetFirstPlatform() *Platform {
-	return g.platforms[0]
-}
-
 func NewGame() *Game {
-	//cueMusic()
 	g := &Game{}
 	g.initPlatforms()
 	g.player = NewPlayer()
@@ -97,28 +55,9 @@ func NewGame() *Game {
 	return g
 }
 
-// WARNING: GetFirstPlatform will panic if you don't initialize the platforms after this
-func (g *Game) resetGameState() {
-	g.player.Reset()
-	g.platforms = g.platforms[:0]
-	g.cameraX = 0
-	g.score = 0
-	g.gameOver = false
-}
-
-func (g *Game) startOver() {
-	g.resetGameState()
-	g.player.ResetPlayer()
-	g.initPlatforms()
-}
-
 func (g *Game) Update() error {
-	g.PlatformHandling()
-
-	// Debug
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		fmt.Printf("Total Platforms: %d\n", len(g.platforms))
-	}
+	g.handlePlatforms()
+	g.debug()
 
 	// Player fell too low
 	if g.player.y >= screenHeight*2 {
@@ -128,111 +67,20 @@ func (g *Game) Update() error {
 	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
-			if g.player.x < g.GetFirstPlatform().GetX() {
+			if g.player.x < g.getFirstPlatform().GetX() {
 				bot = true
 			}
 			g.startOver()
 		}
-		return nil
-	}
-
-	// Store previous X position for side collision correction
-	prevX := g.player.x
-
-	if bot {
-		g.botLogic()
 	} else {
-		g.playerControls()
+		prevX := g.player.x // Store previous X position for side collision correction
+		g.handlePlayer()
+		g.applyGravity()
+		g.handlePlatformCollision(prevX)
+		g.handleScreenBounds()
+		g.handleCameraMovement()
 	}
-
-	// Apply gravity
-	g.player.velocityY += gravity
-	g.player.y += g.player.velocityY
-
-	// Platform collision detection (both vertical and side)
-	for _, p := range g.platforms {
-		// Check if player is within platform's horizontal range
-		playerRight := g.player.x + playerSize
-		playerLeft := g.player.x
-		platformRight := p.x + p.width
-		platformLeft := p.x
-
-		// **Vertical collision (Landing on platform)**
-		if playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
-			g.player.y+playerSize > p.y && g.player.y+playerSize-g.player.velocityY <= p.y { // Player is falling onto the platform
-			// Land on the platform
-			g.player.y = p.y - playerSize
-			g.player.velocityY = 0
-			g.player.isJumping = false
-
-			if !p.visited {
-				p.visited = true
-				g.score++
-			}
-		}
-
-		// **Side collision (Hitting the sides of the platform)**
-		if g.player.y+playerSize > p.y { // Player is below platform surface
-			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
-				g.player.x = platformLeft - playerSize
-				g.player.velocityX = 0
-			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
-				g.player.x = platformRight
-				g.player.velocityX = 0
-			}
-		}
-	}
-
-	// Keep player within screen bounds (on sides)
-	if g.player.x < g.cameraX {
-		g.player.x = g.cameraX
-	} else if g.player.x+playerSize > g.cameraX+screenWidth {
-		g.player.x = g.cameraX + screenWidth - playerSize
-	}
-
-	// Move camera horizontally as player moves
-	g.cameraX = max(g.player.x-screenWidth/2+playerSize/2, g.GetFirstPlatform().x-playerSize)
-	if g.cameraX < 0 {
-		g.cameraX = 0
-	}
-
 	return nil
-}
-
-func (g *Game) botLogic() {
-	g.player.AccelerateRight()
-	for i, p := range g.platforms {
-		if i < len(g.platforms)-1 {
-			if g.botShouldJump(*p, *g.platforms[i+1]) {
-				g.player.Jump()
-			}
-		}
-
-	}
-}
-
-func (g *Game) playerControls() {
-	// Accelerate left and right
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		g.player.AccelerateLeft()
-	} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		g.player.AccelerateRight()
-	} else {
-		g.slowPlayer()
-	}
-
-	// Jumping logic
-	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
-		g.player.Jump()
-	}
-}
-
-func (g *Game) botShouldJump(p, nextP Platform) bool {
-	if p.y+50 < nextP.y {
-		return false
-	}
-	pRight := p.x + p.width
-	return pRight-50 < g.player.x && g.player.x < pRight && !g.player.isJumping
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -289,40 +137,199 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
+func (g *Game) initPlatforms() {
+	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY)}
+	for i := 1; i < 2; i++ {
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1]))
+	}
+}
+
+func (g *Game) handlePlatforms() {
+	// Generate New
+	if g.distToLastPlatform() < platformWidth {
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.getLastPlatform()))
+	}
+	// Cleanup
+	if g.distToFirstPlatform() > platformSpacing*2 {
+		g.platforms = g.platforms[1:]
+	}
+}
+
+func (g *Game) distToLastPlatform() float64 {
+	lastPlatform := g.getLastPlatform()
+	return g.player.GetDist(lastPlatform)
+}
+
+func (g *Game) distToFirstPlatform() float64 {
+	firstPlatform := g.getFirstPlatform()
+	return g.player.GetDist(firstPlatform)
+}
+
+func (g *Game) getLastPlatform() *Platform {
+	return g.platforms[len(g.platforms)-1]
+}
+
+func (g *Game) getFirstPlatform() *Platform {
+	return g.platforms[0]
+}
+
+// WARNING: getFirstPlatform will panic if you don't initialize the platforms after this
+func (g *Game) resetGameState() {
+	g.player.Reset()
+	g.platforms = g.platforms[:0]
+	g.cameraX = 0
+	g.score = 0
+	g.gameOver = false
+}
+
+func (g *Game) startOver() {
+	g.resetGameState()
+	g.player.ResetPlayer()
+	g.initPlatforms()
+}
+
+func (g *Game) playerOnPlatform(p Platform) bool {
+	// Check if player is within platform's horizontal range
+	playerRight := g.player.x + playerSize
+	playerLeft := g.player.x
+	platformRight := p.x + p.width
+	platformLeft := p.x
+
+	// **Vertical collision (Landing on platform)**
+	return playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
+		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
+}
+
+func (g *Game) playerInAir() bool {
+	for _, p := range g.platforms {
+		if g.playerOnPlatform(*p) {
+			return false
+		}
+	}
+	return true
+}
+
+func (g *Game) botLogic() {
+	g.player.AccelerateRight()
+	for i, p := range g.platforms {
+		if i < len(g.platforms)-1 {
+			if g.botShouldJump(*p, *g.platforms[i+1]) {
+				g.player.Jump()
+			}
+		}
+
+	}
+}
+
+func (g *Game) playerControls() {
+	// Accelerate left and right
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		g.player.AccelerateLeft()
+	} else if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		g.player.AccelerateRight()
+	} else {
+		g.slowPlayer()
+	}
+
+	// Jumping logic
+	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
+		if g.playerCanJump() {
+			g.player.Jump()
+		}
+	}
+}
+
+func (g *Game) botShouldJump(p, nextP Platform) bool {
+	if p.y+50 < nextP.y {
+		return false
+	}
+	pRight := p.x + p.width
+	return pRight-50 < g.player.x && g.player.x < pRight && !g.player.isJumping
+}
+
 func (g *Game) slowPlayer() {
 	g.player.velocityX *= .8
 }
 
-var audioContext *audio.Context
+func (g *Game) playerCanJump() bool {
+	return !g.playerInAir()
+}
 
-func cueMusic() {
-	var player *audio.Player
-	audioContext = audio.NewContext(sampleRate)
+func (g *Game) handlePlatformCollision(prevX float64) {
+	for _, p := range g.platforms {
+		// **Vertical collision (Landing on platform)**
+		if g.playerOnPlatform(*p) {
+			// Land on the platform
+			g.player.y = p.y - playerSize
+			g.player.velocityY = 0
+			g.player.isJumping = false
 
-	// Open the file
-	file, err := os.Open("assets/music/background-loop-melodic-techno-02-2690.mp3")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Decode the MP3 file
-	stream, err := mp3.DecodeWithSampleRate(sampleRate, file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Create an audio player
-	player, err = audio.NewPlayer(audioContext, stream)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	player.Play()
-	go func() {
-		for {
-			if !player.IsPlaying() {
-				player.Rewind()
-				player.Play()
+			if !p.visited {
+				p.visited = true
+				g.score++
 			}
 		}
-	}()
+
+		playerRight := g.player.x + playerSize
+		playerLeft := g.player.x
+		platformRight := p.x + p.width
+		platformLeft := p.x
+		// **Side collision (Hitting the sides of the platform)**
+		if g.player.y+playerSize > p.y { // Player is below platform surface
+			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
+				g.player.x = platformLeft - playerSize
+				g.player.velocityX = 0
+			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
+				g.player.x = platformRight
+				g.player.velocityX = 0
+			}
+		}
+	}
+}
+
+func (g *Game) handleScreenBounds() {
+	if g.player.x < g.cameraX {
+		g.player.x = g.cameraX
+	} else if g.player.x+playerSize > g.cameraX+screenWidth {
+		g.player.x = g.cameraX + screenWidth - playerSize
+	}
+}
+
+func (g *Game) handleCameraMovement() {
+	g.cameraX = max(g.player.x-screenWidth/2+playerSize/2, g.getFirstPlatform().x-playerSize)
+	if g.cameraX < 0 {
+		g.cameraX = 0
+	}
+}
+
+func (g *Game) applyGravity() {
+	if g.player.isJumping {
+		g.player.framesSinceJump++
+	} else {
+		g.player.framesSinceJump = 0
+	}
+	currentGravity := gravity
+	if g.player.velocityY > 0 {
+		currentGravity = heavyGravity
+	}
+	if g.player.framesSinceJump < framesWithLightGravity {
+		currentGravity = lightGravity
+	}
+	g.player.velocityY += currentGravity
+	g.player.y += g.player.velocityY
+}
+
+func (g *Game) handlePlayer() {
+	if bot {
+		g.botLogic()
+	} else {
+		g.playerControls()
+	}
+}
+
+func (g *Game) debug() {
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
+		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
+		fmt.Printf("Frames Since Jumping: %d\n", g.player.framesSinceJump)
+	}
 }
