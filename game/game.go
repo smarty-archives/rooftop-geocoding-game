@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
 	"strconv"
 
@@ -15,24 +14,25 @@ const (
 	screenWidth            = 640
 	screenHeight           = 480
 	playerSize             = 40
-	platformWidth          = 200
-	platformSpacing        = 300
+	platformSpacing        = 100
 	maxYDeltaTop           = 120
 	startingPlatformHeight = 300
 	jumpApexHeight         = 140 // todo calculate from jumpForce
-	startingPlatformX      = (screenWidth / 2) - (platformWidth / 2)
+	minimumPlatformHeight  = 20
+	startingPlatformWidth  = 200
+	startingPlatformX      = (screenWidth / 2) - (startingPlatformWidth / 2)
 	startingPlatformY      = screenHeight - startingPlatformHeight
-	lightGravity           = 0.5
-	gravity                = 0.6
-	heavyGravity           = 0.7
-	framesWithLightGravity = 20
+	lightGravity           = 0.4
+	gravity                = 0.7
+	heavyGravity           = 0.8
 )
 
 var (
-	colorGray       = color.RGBA{R: 128, G: 128, B: 128, A: 255}
-	colorSmartyBlue = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText       = color.Black
-	bot             = false
+	colorGray           = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorSmartyBlue     = color.RGBA{R: 0, G: 102, B: 255, A: 255}
+	colorText           = color.Black
+	bot                 = false
+	botPressingSpaceKey = true
 )
 
 type Game struct {
@@ -48,10 +48,7 @@ func NewGame() *Game {
 	g := &Game{}
 	g.initPlatforms()
 	g.player = NewPlayer()
-
-	// Use the default basic font from Ebiten
-	g.font = basicfont.Face7x13
-
+	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
 	return g
 }
 
@@ -67,15 +64,16 @@ func (g *Game) Update() error {
 	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
-			if g.player.x < g.getFirstPlatform().GetX() {
-				bot = true
-			}
+			// todo enable bot with new logic
+			//if g.player.x < g.getFirstPlatform().GetX() {
+			//	bot = true
+			//}
 			g.startOver()
 		}
 	} else {
 		prevX := g.player.x // Store previous X position for side collision correction
 		g.handlePlayer()
-		g.applyGravity()
+		// g.applyGravity() // todo make bot and player implement interface that applyGravity can use instead of checking for spacebar
 		g.handlePlatformCollision(prevX)
 		g.handleScreenBounds()
 		g.handleCameraMovement()
@@ -138,7 +136,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (g *Game) initPlatforms() {
-	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY)}
+	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY, startingPlatformWidth)}
 	for i := 1; i < 2; i++ {
 		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1]))
 	}
@@ -146,11 +144,11 @@ func (g *Game) initPlatforms() {
 
 func (g *Game) handlePlatforms() {
 	// Generate New
-	if g.distToLastPlatform() < platformWidth {
+	if g.distToLastPlatform() < screenWidth/2 {
 		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.getLastPlatform()))
 	}
 	// Cleanup
-	if g.distToFirstPlatform() > platformSpacing*2 {
+	if g.distToFirstPlatform() > screenWidth {
 		g.platforms = g.platforms[1:]
 	}
 }
@@ -217,7 +215,6 @@ func (g *Game) botLogic() {
 				g.player.Jump()
 			}
 		}
-
 	}
 }
 
@@ -303,16 +300,21 @@ func (g *Game) handleCameraMovement() {
 }
 
 func (g *Game) applyGravity() {
-	if g.player.isJumping {
-		g.player.framesSinceJump++
-	} else {
-		g.player.framesSinceJump = 0
-	}
 	currentGravity := gravity
 	if g.player.velocityY > 0 {
 		currentGravity = heavyGravity
+	} else if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		currentGravity = lightGravity
 	}
-	if g.player.framesSinceJump < framesWithLightGravity {
+	g.player.velocityY += currentGravity
+	g.player.y += g.player.velocityY
+}
+
+func (g *Game) applyBotGravity() {
+	currentGravity := gravity
+	if g.player.velocityY > 0 {
+		currentGravity = heavyGravity
+	} else if botPressingSpaceKey {
 		currentGravity = lightGravity
 	}
 	g.player.velocityY += currentGravity
@@ -322,14 +324,15 @@ func (g *Game) applyGravity() {
 func (g *Game) handlePlayer() {
 	if bot {
 		g.botLogic()
+		g.applyBotGravity()
 	} else {
 		g.playerControls()
+		g.applyGravity()
 	}
 }
 
 func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
-		fmt.Printf("Frames Since Jumping: %d\n", g.player.framesSinceJump)
 	}
 }

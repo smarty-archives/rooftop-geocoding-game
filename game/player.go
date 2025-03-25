@@ -10,20 +10,19 @@ import (
 const (
 	left                   = -1
 	right                  = 1
-	startingJumpForce      = -12.0
+	startingJumpForce      = -12
 	startingPlayerSpeed    = 0.2
-	startingMaxPlayerSpeed = 5.0
+	startingMaxPlayerSpeed = 4
 )
 
 type Player struct {
 	Pos
 	Stats
-	velocityX       float64
-	velocityY       float64
-	isJumping       bool
-	framesSinceJump int
-	animation       PlayerAnimationState
-	image           *ebiten.Image
+	velocityX float64
+	velocityY float64
+	isJumping bool
+	animation PlayerAnimationState
+	image     *ebiten.Image
 }
 
 func NewPlayer() *Player {
@@ -51,7 +50,6 @@ func (p *Player) Reset() {
 	p.velocityX = 0
 	p.velocityY = 0
 	p.isJumping = false
-	p.framesSinceJump = 0
 }
 
 func (p *Player) Jump() {

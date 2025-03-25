@@ -13,10 +13,10 @@ type Platform struct {
 	visited bool
 }
 
-func NewPlatform(x, y float64) *Platform {
+func NewPlatform(x, y, width float64) *Platform {
 	return &Platform{
 		Pos:   *NewPos(x, y),
-		width: platformWidth,
+		width: width,
 	}
 }
 
@@ -24,17 +24,15 @@ func GenerateNewRandomPlatform(prevPlatform *Platform) *Platform {
 	x := prevPlatform.x
 	y := prevPlatform.y
 	minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
-	maxY := float64(screenHeight - 20)
-	//randY := pickOne(minY, y+49)
+	maxY := float64(screenHeight - minimumPlatformHeight)
+	randX := x + prevPlatform.width + giveOrTake(platformSpacing, 50)
 	randY := float64(rand.Intn(int(maxY)-int(minY))) + minY
-	return NewPlatform(x+platformSpacing, randY)
+	randWidth := giveOrTake(150, 75)
+	return NewPlatform(randX, randY, randWidth)
 }
 
-func pickOne(a, b float64) float64 {
-	if rand.Intn(2) == 0 {
-		return a
-	}
-	return b
+func giveOrTake(num, delta float64) float64 {
+	return float64(rand.Intn(int(num+delta)-int(num-delta))) + num - delta
 }
 
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
