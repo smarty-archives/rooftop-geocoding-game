@@ -264,6 +264,7 @@ func (g *Game) botShouldJump() bool {
 	for i := range 30 {
 		newY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
 		if newY < platformPos.y {
+			// todo account for case where the next platform is very close and very tall
 			if i > 1 && g.playerHasMoreRunway() {
 				return false
 			}
