@@ -64,7 +64,6 @@ func (g *Game) Update() error {
 	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
-			// todo enable bot with new logic
 			if g.player.x < g.getFirstPlatform().GetX() {
 				bot = true
 			}
@@ -215,7 +214,7 @@ func (g *Game) botLogic() {
 }
 
 // heightAfterXFramesOfJumping assumes that player is moving at top speed
-func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) float64 {
+func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) (y float64, velocityY float64) {
 	finalY := g.player.y
 	velocity := g.player.GetJumpForce()
 	for i := range totalFrames {
@@ -228,7 +227,7 @@ func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) float64 
 		}
 		finalY += velocity
 	}
-	return finalY
+	return finalY, velocity
 }
 
 func (g *Game) NextUnvisitedPlatform() *Platform {
@@ -262,9 +261,8 @@ func (g *Game) botShouldJump() bool {
 	platformPos := g.NextUnvisitedPlatform()
 	numFrames := (platformPos.x - g.player.x) / g.player.maxPlayerSpeed
 	for i := range 30 {
-		newY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
-		if newY < platformPos.y {
-			// todo account for case where the next platform is very close and very tall
+		newY, newVelocityY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
+		if newY < platformPos.y && newVelocityY > 0 {
 			if i > 1 && g.playerHasMoreRunway() {
 				return false
 			}
@@ -276,8 +274,11 @@ func (g *Game) botShouldJump() bool {
 }
 
 func (g *Game) playerHasMoreRunway() bool {
-	for _, platform := range g.platforms {
+	for i, platform := range g.platforms {
 		if g.playerOnPlatform(*platform) {
+			if g.platforms[i+1].y+80 <= platform.y { // this assumes there is always a platform after the one the player is on
+				return false
+			}
 			return platform.x+platform.width > g.player.x+50
 		}
 	}
@@ -377,16 +378,4 @@ func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
 	}
-}
-
-func (g *Game) numJumpFrames() int {
-	platformPos := g.NextUnvisitedPlatform()
-	numFrames := int((platformPos.x - g.player.x) / g.player.maxPlayerSpeed)
-	for i := range 30 {
-		newY := g.heightAfterXFramesOfJumping(i, numFrames+1)
-		if newY < platformPos.y {
-			return i
-		}
-	}
-	return 0
 }
