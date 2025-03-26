@@ -79,6 +79,7 @@ func (p *Player) SetStats(jumpForce, playerSpeed, maxPlayerSpeed float64) {
 
 func (p *Player) Draw(screen *ebiten.Image, cameraX float64) {
 	p.cycleImage()
+	// todo move some stuff to init
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(p.image.Bounds().Dx())
 	scaleY := playerSize / float64(p.image.Bounds().Dy())

@@ -14,6 +14,7 @@ const (
 	imagesFilePath          = "assets/images/"
 	playerImageFileName     = "guy"
 	backgroundImageFileName = "layer"
+	coinImageFileName       = "coin"
 	imageFileExtension      = ".png"
 	NumPlayerImages         = 8
 	NumBackgroundLayers     = 2 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
@@ -22,6 +23,7 @@ const (
 type Manager struct {
 	playerImages     map[string]*ebiten.Image
 	backgroundImages map[string]*ebiten.Image
+	coinImage        *ebiten.Image
 }
 
 var (
@@ -54,6 +56,12 @@ func NewManager() *Manager {
 		}
 		result.backgroundImages[fileName] = image
 	}
+	fileName := buildCoinImageFileName()
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	result.coinImage = image
 	return result
 }
 
@@ -75,10 +83,17 @@ func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
 	return image, nil
 }
 
+func (m *Manager) LoadCoinImage() (*ebiten.Image, error) {
+	return m.coinImage, nil
+}
 func buildPlayerImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", playerImageFileName, i, imageFileExtension)
 }
 
 func buildBackgroundImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", backgroundImageFileName, i, imageFileExtension)
+}
+
+func buildCoinImageFileName() string {
+	return fmt.Sprintf("%s%s", coinImageFileName, imageFileExtension)
 }
