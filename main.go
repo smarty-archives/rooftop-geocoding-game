@@ -14,7 +14,7 @@ import (
 	"github.com/smarty-archives/rooftop-geocoding-game/game"
 )
 
-//go:embed assets/music/background-loop-melodic-techno-02-2690.mp3
+//go:embed assets/music/background.mp3
 var bgmData []byte
 
 const sampleRate = 44100 // Standard audio sample rate
