@@ -28,11 +28,11 @@ const (
 )
 
 var (
-	colorGray           = color.RGBA{R: 128, G: 128, B: 128, A: 255}
-	colorSmartyBlue     = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText           = color.Black
-	bot                 = false
-	botPressingSpaceKey = true
+	colorGray            = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorSmartyBlue      = color.RGBA{R: 0, G: 102, B: 255, A: 255}
+	colorText            = color.Black
+	bot                  = false
+	botFramesLeftJumping = 0
 )
 
 type Game struct {
@@ -65,13 +65,13 @@ func (g *Game) Update() error {
 	if g.gameOver {
 		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 			// todo enable bot with new logic
-			//if g.player.x < g.getFirstPlatform().GetX() {
-			//	bot = true
-			//}
+			if g.player.x < g.getFirstPlatform().GetX() {
+				bot = true
+			}
 			g.startOver()
 		}
 	} else {
-		prevX := g.player.x // Store previous X position for side collision correction
+		prevX := g.player.x // Store previous x position for side collision correction
 		g.handlePlayer()
 		// g.applyGravity() // todo make bot and player implement interface that applyGravity can use instead of checking for spacebar
 		g.handlePlatformCollision(prevX)
@@ -93,7 +93,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		gameOverWidth := font.MeasureString(g.font, gameOverText).Ceil()
 		restartWidth := font.MeasureString(g.font, restartText).Ceil()
 
-		// Calculate the X position to center the "Game Over" text
+		// Calculate the x position to center the "Game Over" text
 		gameOverX := (screenWidth - gameOverWidth) / 2
 		restartX := (screenWidth - restartWidth) / 2
 
@@ -109,7 +109,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		botWidth := font.MeasureString(g.font, botText).Ceil()
 		botWidth2 := font.MeasureString(g.font, botText2).Ceil()
 
-		// Calculate the X position to center the "Game Over" text
+		// Calculate the x position to center the "Game Over" text
 		botX := (screenWidth - botWidth) / 2
 		botX2 := (screenWidth - botWidth2) / 2
 
@@ -209,13 +209,35 @@ func (g *Game) playerInAir() bool {
 
 func (g *Game) botLogic() {
 	g.player.AccelerateRight()
-	for i, p := range g.platforms {
-		if i < len(g.platforms)-1 {
-			if g.botShouldJump(*p, *g.platforms[i+1]) {
-				g.player.Jump()
-			}
+	if g.playerCanJump() && g.botShouldJump() {
+		g.player.Jump()
+	}
+}
+
+// heightAfterXFramesOfJumping assumes that player is moving at top speed
+func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) float64 {
+	finalY := g.player.y
+	velocity := g.player.GetJumpForce()
+	for i := range totalFrames {
+		if velocity > 0 {
+			velocity += heavyGravity
+		} else if i < jumpFrames {
+			velocity += lightGravity
+		} else {
+			velocity += gravity
+		}
+		finalY += velocity
+	}
+	return finalY
+}
+
+func (g *Game) NextUnvisitedPlatform() *Platform {
+	for _, p := range g.platforms {
+		if !p.visited {
+			return p
 		}
 	}
+	return nil
 }
 
 func (g *Game) playerControls() {
@@ -236,12 +258,29 @@ func (g *Game) playerControls() {
 	}
 }
 
-func (g *Game) botShouldJump(p, nextP Platform) bool {
-	if p.y+50 < nextP.y {
-		return false
+func (g *Game) botShouldJump() bool {
+	platformPos := g.NextUnvisitedPlatform()
+	numFrames := (platformPos.x - g.player.x) / g.player.maxPlayerSpeed
+	for i := range 30 {
+		newY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
+		if newY < platformPos.y {
+			if i > 1 && g.playerHasMoreRunway() {
+				return false
+			}
+			botFramesLeftJumping = i
+			return true
+		}
 	}
-	pRight := p.x + p.width
-	return pRight-50 < g.player.x && g.player.x < pRight && !g.player.isJumping
+	return false
+}
+
+func (g *Game) playerHasMoreRunway() bool {
+	for _, platform := range g.platforms {
+		if g.playerOnPlatform(*platform) {
+			return platform.x+platform.width > g.player.x+50
+		}
+	}
+	return false
 }
 
 func (g *Game) slowPlayer() {
@@ -300,6 +339,7 @@ func (g *Game) handleCameraMovement() {
 }
 
 func (g *Game) applyGravity() {
+	// todo make this use a function that can be called by applyBotGravity and heightAfterXFramesOfJumping
 	currentGravity := gravity
 	if g.player.velocityY > 0 {
 		currentGravity = heavyGravity
@@ -314,8 +354,9 @@ func (g *Game) applyBotGravity() {
 	currentGravity := gravity
 	if g.player.velocityY > 0 {
 		currentGravity = heavyGravity
-	} else if botPressingSpaceKey {
+	} else if botFramesLeftJumping > 0 {
 		currentGravity = lightGravity
+		botFramesLeftJumping--
 	}
 	g.player.velocityY += currentGravity
 	g.player.y += g.player.velocityY
@@ -335,4 +376,16 @@ func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
 	}
+}
+
+func (g *Game) numJumpFrames() int {
+	platformPos := g.NextUnvisitedPlatform()
+	numFrames := int((platformPos.x - g.player.x) / g.player.maxPlayerSpeed)
+	for i := range 30 {
+		newY := g.heightAfterXFramesOfJumping(i, numFrames+1)
+		if newY < platformPos.y {
+			return i
+		}
+	}
+	return 0
 }

@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	left                   = -1
-	right                  = 1
-	startingJumpForce      = -12
-	startingPlayerSpeed    = 0.2
-	startingMaxPlayerSpeed = 4
+	left                       = -1
+	right                      = 1
+	startingJumpForce          = -12
+	startingPlayerAcceleration = 0.2
+	startingMaxPlayerSpeed     = 4
 )
 
 type Player struct {
@@ -35,7 +35,7 @@ func (p *Player) ResetPlayer() {
 	p.x = screenWidth/2 - (playerSize / 2)
 	p.y = 0
 	p.jumpForce = startingJumpForce
-	p.playerSpeed = startingPlayerSpeed
+	p.playerAcceleration = startingPlayerAcceleration
 	p.maxPlayerSpeed = startingMaxPlayerSpeed
 	image, err := media.Instance.LoadPlayerImage(0)
 	if err != nil {
@@ -62,7 +62,7 @@ func (p *Player) Accelerate(dir float64) {
 		p.velocityX = 0
 	}
 	if dir*p.velocityX <= p.GetMaxPlayerSpeed() {
-		p.velocityX += dir * p.GetPlayerSpeed()
+		p.velocityX += dir * p.GetPlayerAcceleration()
 	}
 	p.x += p.velocityX
 }
@@ -73,7 +73,7 @@ func (p *Player) AccelerateRight() { p.Accelerate(right) }
 
 func (p *Player) SetStats(jumpForce, playerSpeed, maxPlayerSpeed float64) {
 	p.SetJumpForce(jumpForce)
-	p.SetPlayerSpeed(playerSpeed)
+	p.SetPlayerAcceleration(playerSpeed)
 	p.SetMaxPlayerSpeed(maxPlayerSpeed)
 }
 
