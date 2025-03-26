@@ -2,6 +2,7 @@ package game
 
 import (
 	"image/color"
+	"math"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -30,18 +31,19 @@ const (
 var (
 	colorGray            = color.RGBA{R: 128, G: 128, B: 128, A: 255}
 	colorSmartyBlue      = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText            = color.Black
+	colorText            = color.White
 	bot                  = false
 	botFramesLeftJumping = 0
 )
 
 type Game struct {
-	player    *Player
-	platforms []*Platform
-	cameraX   float64
-	score     int // Score counter
-	gameOver  bool
-	font      font.Face
+	player           *Player
+	platforms        []*Platform
+	cameraX          float64
+	score            int // Score counter
+	gameOver         bool
+	font             font.Face
+	backgroundLayers []Layer
 }
 
 func NewGame() *Game {
@@ -49,10 +51,12 @@ func NewGame() *Game {
 	g.initPlatforms()
 	g.player = NewPlayer()
 	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
+	g.backgroundLayers = NewLayers()
 	return g
 }
 
 func (g *Game) Update() error {
+	g.handleBackgroundLayers()
 	g.handlePlatforms()
 	g.debug()
 
@@ -81,7 +85,8 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.White)
+	g.drawBackgroundLayers(screen)
+	//screen.Fill(color.White)
 	// If the game is over, display the "Game Over" screen
 	if g.gameOver {
 		// Text to display
@@ -377,5 +382,40 @@ func (g *Game) handlePlayer() {
 func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
+	}
+}
+
+func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
+	for _, layer := range g.backgroundLayers {
+		imgWidth := layer.Image.Bounds().Dx()
+		imgHeight := layer.Image.Bounds().Dy()
+
+		// Scale the image to match the screen height
+		scaleY := float64(screenHeight) / float64(imgHeight)
+		scaleX := scaleY // Maintain aspect ratio horizontally
+
+		// Calculate the total width of a single scaled image
+		scaledWidth := float64(imgWidth) * scaleX
+
+		// Ensure the offset wraps around seamlessly
+		xOffset := layer.OffsetX
+		xOffset = math.Mod(xOffset, scaledWidth)
+		if xOffset > 0 {
+			xOffset -= scaledWidth
+		}
+
+		// Draw enough images to cover the entire screen width
+		for x := xOffset; x < screenWidth; x += scaledWidth {
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Scale(scaleX, scaleY)
+			op.GeoM.Translate(x, 0)
+			screen.DrawImage(layer.Image, op)
+		}
+	}
+}
+
+func (g *Game) handleBackgroundLayers() {
+	for i := range g.backgroundLayers {
+		g.backgroundLayers[i].OffsetX = -g.cameraX * g.backgroundLayers[i].Speed
 	}
 }

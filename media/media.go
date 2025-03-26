@@ -11,14 +11,17 @@ import (
 )
 
 const (
-	imagesFilePath      = "assets/images/"
-	playerImageFileName = "guy"
-	imageFileExtension  = ".png"
-	NumPlayerImages     = 8
+	imagesFilePath          = "assets/images/"
+	playerImageFileName     = "guy"
+	backgroundImageFileName = "layer"
+	imageFileExtension      = ".png"
+	NumPlayerImages         = 8
+	NumBackgroundLayers     = 2 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
 )
 
 type Manager struct {
-	playerImages map[string]*ebiten.Image
+	playerImages     map[string]*ebiten.Image
+	backgroundImages map[string]*ebiten.Image
 }
 
 var (
@@ -32,7 +35,8 @@ func init() {
 
 func NewManager() *Manager {
 	result := &Manager{
-		playerImages: make(map[string]*ebiten.Image),
+		playerImages:     make(map[string]*ebiten.Image),
+		backgroundImages: make(map[string]*ebiten.Image),
 	}
 	for i := range NumPlayerImages {
 		fileName := buildPlayerImageFileName(i)
@@ -41,6 +45,14 @@ func NewManager() *Manager {
 			log.Fatal(err)
 		}
 		result.playerImages[fileName] = image
+	}
+	for i := range NumBackgroundLayers {
+		fileName := buildBackgroundImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		result.backgroundImages[fileName] = image
 	}
 	return result
 }
@@ -54,6 +66,19 @@ func (m *Manager) LoadPlayerImage(i int) (*ebiten.Image, error) {
 	return image, nil
 }
 
+func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
+	fileName := buildBackgroundImageFileName(i)
+	image, ok := m.backgroundImages[fileName]
+	if !ok {
+		return nil, errImageNotFound
+	}
+	return image, nil
+}
+
 func buildPlayerImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", playerImageFileName, i, imageFileExtension)
+}
+
+func buildBackgroundImageFileName(i int) string {
+	return fmt.Sprintf("%s%d%s", backgroundImageFileName, i, imageFileExtension)
 }
