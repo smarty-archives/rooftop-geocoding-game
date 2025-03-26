@@ -138,14 +138,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 func (g *Game) initPlatforms() {
 	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY, startingPlatformWidth)}
 	for i := 1; i < 2; i++ {
-		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1]))
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1], g.score))
 	}
 }
 
 func (g *Game) handlePlatforms() {
 	// Generate New
 	if g.distToLastPlatform() < screenWidth/2 {
-		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.getLastPlatform()))
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.getLastPlatform(), g.score))
 	}
 	// Cleanup
 	if g.distToFirstPlatform() > screenWidth {
