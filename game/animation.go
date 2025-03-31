@@ -1,8 +1,10 @@
 package game
 
 import (
+	"log"
 	"math"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
 
@@ -15,16 +17,16 @@ type BaseAnimationState struct {
 	imageNum         int
 }
 
-func (bas *BaseAnimationState) getImageNum() int {
-	return bas.imageNum
+func (state *BaseAnimationState) getImageNum() int {
+	return state.imageNum
 }
 
-func (bas *BaseAnimationState) shouldAnimate() bool {
-	if bas.animationCounter > 0 {
-		bas.animationCounter--
+func (state *BaseAnimationState) shouldAnimate() bool {
+	if state.animationCounter > 0 {
+		state.animationCounter--
 		return false
 	}
-	bas.animationCounter = 6
+	state.animationCounter = 6
 	return true
 }
 
@@ -33,6 +35,7 @@ type PlayerAnimationState interface {
 	doState(*Player)
 	getImageNum() int
 	shouldAnimate() bool
+	getImage() *ebiten.Image
 }
 
 type IdleState struct {
@@ -50,10 +53,40 @@ func (state *IdleState) getNextState(player *Player) PlayerAnimationState {
 }
 
 func (state *IdleState) doState(player *Player) {
+	state.imageNum++
+	if state.imageNum >= media.NumIdleImages {
+		state.imageNum = 0
+	}
+	player.image = state.getImage()
+}
+
+func (state *IdleState) shouldAnimate() bool {
+	if state.animationCounter > 0 {
+		state.animationCounter--
+		return false
+	}
+	state.animationCounter = 9
+	return true
+}
+
+func (state *IdleState) getImage() *ebiten.Image {
+	image, err := media.Instance.LoadIdleImage(state.getImageNum())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return image
 }
 
 type RunningState struct {
 	BaseAnimationState
+}
+
+func (state *RunningState) getImage() *ebiten.Image {
+	image, err := media.Instance.LoadPlayerImage(state.getImageNum())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return image
 }
 
 func (state *RunningState) getNextState(player *Player) PlayerAnimationState {
@@ -71,10 +104,19 @@ func (state *RunningState) doState(player *Player) {
 	if state.imageNum >= media.NumPlayerImages {
 		state.imageNum = 0
 	}
+	player.image = state.getImage()
 }
 
 type JumpingState struct {
 	BaseAnimationState
+}
+
+func (state *JumpingState) getImage() *ebiten.Image {
+	image, err := media.Instance.LoadPlayerImage(state.getImageNum())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return image
 }
 
 func (state *JumpingState) getNextState(player *Player) PlayerAnimationState {
@@ -98,4 +140,5 @@ func (state *JumpingState) doState(player *Player) {
 	if state.imageNum >= media.NumPlayerImages {
 		state.imageNum = 0
 	}
+	player.image = state.getImage()
 }

@@ -13,15 +13,18 @@ import (
 const (
 	imagesFilePath          = "assets/images/"
 	playerImageFileName     = "guy"
+	idleImageFileName       = "idle"
 	backgroundImageFileName = "layer"
 	coinImageFileName       = "coin"
 	imageFileExtension      = ".png"
 	NumPlayerImages         = 8
-	NumBackgroundLayers     = 2 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
+	NumIdleImages           = 2
+	NumBackgroundLayers     = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
 )
 
 type Manager struct {
 	playerImages     map[string]*ebiten.Image
+	idleImages       map[string]*ebiten.Image
 	backgroundImages map[string]*ebiten.Image
 	coinImage        *ebiten.Image
 }
@@ -38,8 +41,11 @@ func init() {
 func NewManager() *Manager {
 	result := &Manager{
 		playerImages:     make(map[string]*ebiten.Image),
+		idleImages:       make(map[string]*ebiten.Image),
 		backgroundImages: make(map[string]*ebiten.Image),
 	}
+	// todo make function for these loops
+	// Running Images
 	for i := range NumPlayerImages {
 		fileName := buildPlayerImageFileName(i)
 		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
@@ -48,6 +54,16 @@ func NewManager() *Manager {
 		}
 		result.playerImages[fileName] = image
 	}
+	// Idle Images
+	for i := range NumIdleImages {
+		fileName := buildIdleImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		result.idleImages[fileName] = image
+	}
+	// Background Images
 	for i := range NumBackgroundLayers {
 		fileName := buildBackgroundImageFileName(i)
 		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
@@ -56,6 +72,7 @@ func NewManager() *Manager {
 		}
 		result.backgroundImages[fileName] = image
 	}
+	// Coin Image
 	fileName := buildCoinImageFileName()
 	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
 	if err != nil {
@@ -74,6 +91,15 @@ func (m *Manager) LoadPlayerImage(i int) (*ebiten.Image, error) {
 	return image, nil
 }
 
+func (m *Manager) LoadIdleImage(i int) (*ebiten.Image, error) {
+	fileName := buildIdleImageFileName(i)
+	image, ok := m.idleImages[fileName]
+	if !ok {
+		return nil, errImageNotFound
+	}
+	return image, nil
+}
+
 func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
 	fileName := buildBackgroundImageFileName(i)
 	image, ok := m.backgroundImages[fileName]
@@ -86,8 +112,13 @@ func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
 func (m *Manager) LoadCoinImage() (*ebiten.Image, error) {
 	return m.coinImage, nil
 }
+
 func buildPlayerImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", playerImageFileName, i, imageFileExtension)
+}
+
+func buildIdleImageFileName(i int) string {
+	return fmt.Sprintf("%s%d%s", idleImageFileName, i, imageFileExtension)
 }
 
 func buildBackgroundImageFileName(i int) string {

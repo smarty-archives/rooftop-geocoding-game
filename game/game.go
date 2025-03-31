@@ -32,7 +32,7 @@ const (
 var (
 	colorGray            = color.RGBA{R: 128, G: 128, B: 128, A: 255}
 	colorSmartyBlue      = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText            = color.White
+	colorText            = color.Black
 	bot                  = false
 	botFramesLeftJumping = 0
 )
@@ -129,7 +129,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, p := range g.platforms {
 		p.Draw(screen, g.cameraX)
 		if !p.visited {
-			g.drawCoin(screen, p)
+			//g.drawCoin(screen, p) // TODO ask Easton about if/how to do coins
 		}
 	}
 	// Draw player

@@ -1,8 +1,6 @@
 package game
 
 import (
-	"log"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
@@ -100,10 +98,5 @@ func (p *Player) cycleImage() {
 	}
 	p.animation = p.animation.getNextState(p)
 	p.animation.doState(p)
-
-	image, err := media.Instance.LoadPlayerImage(p.animation.getImageNum())
-	if err != nil {
-		log.Fatal(err)
-	}
-	p.image = image
+	//p.image = p.animation.GetImage()
 }
