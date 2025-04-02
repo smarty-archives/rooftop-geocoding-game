@@ -18,10 +18,11 @@ const (
 	coinSize               = 20
 	platformSpacing        = 100
 	maxYDeltaTop           = 120
-	startingPlatformHeight = 300
-	jumpApexHeight         = 140 // todo calculate from jumpForce
 	minimumPlatformHeight  = 20
-	startingPlatformWidth  = 200
+	maxPlatformHeight      = 285 // this is a little bit less than the height of the building assets
+	maxPlatformWidth       = 175
+	startingPlatformHeight = maxPlatformHeight
+	startingPlatformWidth  = maxPlatformWidth
 	startingPlatformX      = (screenWidth / 2) - (startingPlatformWidth / 2)
 	startingPlatformY      = screenHeight - startingPlatformHeight
 	lightGravity           = 0.4

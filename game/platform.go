@@ -1,33 +1,45 @@
 package game
 
 import (
+	"log"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
 
 type Platform struct {
 	Pos
 	width   float64
 	visited bool
+	image   *ebiten.Image
 }
 
 func NewPlatform(x, y, width float64) *Platform {
+	img, err := media.Instance.LoadBuildingImage(getPlatformIndex(width))
+	if err != nil {
+		log.Fatal(err)
+	}
 	return &Platform{
 		Pos:   *NewPos(x, y),
 		width: width,
+		image: img,
 	}
+}
+
+func getPlatformIndex(width float64) int {
+	return (int(width) - 75) / 25 // 5 different widths from 75 to 175
 }
 
 func GenerateNewRandomPlatform(prevPlatform *Platform, score int) *Platform {
 	x := prevPlatform.x
 	y := prevPlatform.y
-	minY := max(y-maxYDeltaTop, playerSize+jumpApexHeight)
+	minY := max(y-maxYDeltaTop, maxPlatformHeight)
 	maxY := float64(screenHeight - minimumPlatformHeight)
 	randX := x + prevPlatform.width + giveOrTake(platformSpacing, 50)
 	randY := float64(rand.Intn(int(maxY)-int(minY))) + minY
-	randWidth := pickWidth(score, 175, 150, 125, 100, 75)
+	randWidth := pickWidth(score, 175, 150, 125, 100, 75) // these numbers correspond to the widths of the building assets
 	//randWidth := giveOrTake(150, 75)
 	return NewPlatform(randX, randY, randWidth)
 }
@@ -79,10 +91,22 @@ func giveOrTake(num, delta float64) float64 {
 	return float64(rand.Intn(int(num+delta)-int(num-delta))) + num - delta
 }
 
-func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
+// deprecated
+func (p *Platform) Draw2(screen *ebiten.Image, cameraX float64) {
 	platformColor := colorGray
 	if p.visited {
 		platformColor = colorSmartyBlue
 	}
 	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, screenHeight-p.y, platformColor)
+}
+
+func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
+	platformCoor := &ebiten.DrawImageOptions{}
+	scaleX, scaleY := 1.0, 1.0
+	//scaleX := p.width / float64(p.image.Bounds().Dx())
+	//scaleY := scaleX
+	x := p.x - cameraX
+	platformCoor.GeoM.Scale(scaleX, scaleY)
+	platformCoor.GeoM.Translate(x, p.y)
+	screen.DrawImage(p.image, platformCoor)
 }

@@ -15,17 +15,20 @@ const (
 	playerImageFileName     = "guy"
 	idleImageFileName       = "idle"
 	backgroundImageFileName = "layer"
+	buildingImageFileName   = "building"
 	coinImageFileName       = "coin"
 	imageFileExtension      = ".png"
 	NumPlayerImages         = 8
 	NumIdleImages           = 2
 	NumBackgroundLayers     = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
+	NumBuildingImages       = 5
 )
 
 type Manager struct {
 	playerImages     map[string]*ebiten.Image
 	idleImages       map[string]*ebiten.Image
 	backgroundImages map[string]*ebiten.Image
+	buildingImages   map[string]*ebiten.Image
 	coinImage        *ebiten.Image
 }
 
@@ -43,6 +46,7 @@ func NewManager() *Manager {
 		playerImages:     make(map[string]*ebiten.Image),
 		idleImages:       make(map[string]*ebiten.Image),
 		backgroundImages: make(map[string]*ebiten.Image),
+		buildingImages:   make(map[string]*ebiten.Image),
 	}
 	// todo make function for these loops
 	// Running Images
@@ -71,6 +75,15 @@ func NewManager() *Manager {
 			log.Fatal(err)
 		}
 		result.backgroundImages[fileName] = image
+	}
+	// Building Images
+	for i := range NumBuildingImages {
+		fileName := buildBuildingImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		result.buildingImages[fileName] = image
 	}
 	// Coin Image
 	fileName := buildCoinImageFileName()
@@ -109,6 +122,15 @@ func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
 	return image, nil
 }
 
+func (m *Manager) LoadBuildingImage(i int) (*ebiten.Image, error) {
+	fileName := buildBuildingImageFileName(i)
+	image, ok := m.buildingImages[fileName]
+	if !ok {
+		return nil, errImageNotFound
+	}
+	return image, nil
+}
+
 func (m *Manager) LoadCoinImage() (*ebiten.Image, error) {
 	return m.coinImage, nil
 }
@@ -123,6 +145,10 @@ func buildIdleImageFileName(i int) string {
 
 func buildBackgroundImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", backgroundImageFileName, i, imageFileExtension)
+}
+
+func buildBuildingImageFileName(i int) string {
+	return fmt.Sprintf("%s%d%s", buildingImageFileName, i, imageFileExtension)
 }
 
 func buildCoinImageFileName() string {

@@ -65,7 +65,7 @@ func (state *IdleState) shouldAnimate() bool {
 		state.animationCounter--
 		return false
 	}
-	state.animationCounter = 9
+	state.animationCounter = 24
 	return true
 }
 
