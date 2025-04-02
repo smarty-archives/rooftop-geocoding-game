@@ -260,7 +260,7 @@ func (g *Game) playerControls() {
 	}
 
 	// Jumping logic
-	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.player.isJumping {
+	if (ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp)) && !g.player.isJumping {
 		if g.playerCanJump() {
 			g.player.Jump()
 		}
@@ -355,7 +355,7 @@ func (g *Game) applyGravity() {
 	currentGravity := gravity
 	if g.player.velocityY > 0 {
 		currentGravity = heavyGravity
-	} else if ebiten.IsKeyPressed(ebiten.KeySpace) {
+	} else if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) {
 		currentGravity = lightGravity
 	}
 	g.player.velocityY += currentGravity
