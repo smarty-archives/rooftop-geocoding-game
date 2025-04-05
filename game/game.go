@@ -56,15 +56,20 @@ func NewGame() *Game {
 	return g
 }
 
+func (g *Game) initPlatforms() {
+	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY, startingPlatformWidth)}
+	for i := 1; i < 2; i++ {
+		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1], g.score))
+	}
+}
+
+////////////////////////////////////////////////////////////////////////
+
 func (g *Game) Update() error {
 	g.handleBackgroundLayers()
 	g.handlePlatforms()
 	g.debug()
-
-	// Player fell too low
-	if g.player.y >= screenHeight*2 {
-		g.gameOver = true
-	}
+	g.checkGameOver()
 
 	// If game over, reset the game when enter key is pressed
 	if g.gameOver {
@@ -77,7 +82,6 @@ func (g *Game) Update() error {
 	} else {
 		prevX := g.player.x // Store previous x position for side collision correction
 		g.handlePlayer()
-		// g.applyGravity() // todo make bot and player implement interface that applyGravity can use instead of checking for spacebar
 		g.handlePlatformCollision(prevX)
 		g.handleScreenBounds()
 		g.handleCameraMovement()
@@ -85,66 +89,9 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	g.drawBackgroundLayers(screen)
-	//screen.Fill(color.White)
-	// If the game is over, display the "Game Over" screen
-	if g.gameOver {
-		// Text to display
-		gameOverText := "That's not a rooftop geocode!"
-		restartText := "Press Enter to Restart"
-
-		// Measure the width of the "Game Over" text
-		gameOverWidth := font.MeasureString(g.font, gameOverText).Ceil()
-		restartWidth := font.MeasureString(g.font, restartText).Ceil()
-
-		// Calculate the x position to center the "Game Over" text
-		gameOverX := (screenWidth - gameOverWidth) / 2
-		restartX := (screenWidth - restartWidth) / 2
-
-		// Draw the "Game Over" text and restart message
-		text.Draw(screen, gameOverText, g.font, gameOverX, 60, colorText)
-		text.Draw(screen, restartText, g.font, restartX, 90, colorText)
-	}
-	if bot {
-		botText := "You can't be trusted to do it yourself."
-		botText2 := "Now you have to use Smarty."
-
-		// Measure the width of the "Game Over" text
-		botWidth := font.MeasureString(g.font, botText).Ceil()
-		botWidth2 := font.MeasureString(g.font, botText2).Ceil()
-
-		// Calculate the x position to center the "Game Over" text
-		botX := (screenWidth - botWidth) / 2
-		botX2 := (screenWidth - botWidth2) / 2
-
-		// Draw the "Game Over" text and restart message
-		text.Draw(screen, botText, g.font, botX, 60, colorText)
-		text.Draw(screen, botText2, g.font, botX2, 80, colorText)
-	}
-
-	// Draw the platforms & coins
-	for _, p := range g.platforms {
-		p.Draw(screen, g.cameraX)
-		if !p.visited {
-			//g.drawCoin(screen, p) // TODO ask Easton about if/how to do coins
-		}
-	}
-	// Draw player
-	g.player.Draw(screen, g.cameraX)
-
-	// Draw score at top left
-	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return screenWidth, screenHeight
-}
-
-func (g *Game) initPlatforms() {
-	g.platforms = []*Platform{NewPlatform(startingPlatformX, startingPlatformY, startingPlatformWidth)}
-	for i := 1; i < 2; i++ {
-		g.platforms = append(g.platforms, GenerateNewRandomPlatform(g.platforms[i-1], g.score))
+func (g *Game) handleBackgroundLayers() {
+	for i := range g.backgroundLayers {
+		g.backgroundLayers[i].OffsetX = -g.cameraX * g.backgroundLayers[i].Speed
 	}
 }
 
@@ -164,17 +111,36 @@ func (g *Game) distToLastPlatform() float64 {
 	return g.player.GetDist(lastPlatform)
 }
 
+func (g *Game) getLastPlatform() *Platform {
+	return g.platforms[len(g.platforms)-1]
+}
+
 func (g *Game) distToFirstPlatform() float64 {
 	firstPlatform := g.getFirstPlatform()
 	return g.player.GetDist(firstPlatform)
 }
 
-func (g *Game) getLastPlatform() *Platform {
-	return g.platforms[len(g.platforms)-1]
+func (g *Game) debug() {
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
+		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
+	}
+}
+
+// checkGameOver will set gameOver to true if Player fell too low
+func (g *Game) checkGameOver() {
+	if g.player.y >= screenHeight*2 {
+		g.gameOver = true
+	}
 }
 
 func (g *Game) getFirstPlatform() *Platform {
 	return g.platforms[0]
+}
+
+func (g *Game) startOver() {
+	g.resetGameState()
+	g.player.ResetPlayer()
+	g.initPlatforms()
 }
 
 // WARNING: getFirstPlatform will panic if you don't initialize the platforms after this
@@ -186,22 +152,26 @@ func (g *Game) resetGameState() {
 	g.gameOver = false
 }
 
-func (g *Game) startOver() {
-	g.resetGameState()
-	g.player.ResetPlayer()
-	g.initPlatforms()
+func (g *Game) handlePlayer() {
+	// todo make bot and player implement interface that applyGravity can use instead of checking for jumping keys
+	if bot {
+		g.botLogic()
+		g.applyBotGravity()
+	} else {
+		g.playerControls()
+		g.applyGravity()
+	}
 }
 
-func (g *Game) playerOnPlatform(p Platform) bool {
-	// Check if player is within platform's horizontal range
-	playerRight := g.player.x + playerSize
-	playerLeft := g.player.x
-	platformRight := p.x + p.width
-	platformLeft := p.x
+func (g *Game) botLogic() {
+	g.player.AccelerateRight()
+	if g.playerCanJump() && g.botShouldJump() {
+		g.player.Jump()
+	}
+}
 
-	// **Vertical collision (Landing on platform)**
-	return playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
-		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
+func (g *Game) playerCanJump() bool {
+	return !g.playerInAir()
 }
 
 func (g *Game) playerInAir() bool {
@@ -213,11 +183,29 @@ func (g *Game) playerInAir() bool {
 	return true
 }
 
-func (g *Game) botLogic() {
-	g.player.AccelerateRight()
-	if g.playerCanJump() && g.botShouldJump() {
-		g.player.Jump()
+func (g *Game) botShouldJump() bool {
+	platformPos := g.nextUnvisitedPlatform()
+	numFrames := (platformPos.x - g.player.x) / g.player.maxPlayerSpeed
+	for i := range 30 {
+		newY, newVelocityY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
+		if newY < platformPos.y && newVelocityY > 0 {
+			if i > 1 && g.playerHasMoreRunway() {
+				return false
+			}
+			botFramesLeftJumping = i
+			return true
+		}
 	}
+	return false
+}
+
+func (g *Game) nextUnvisitedPlatform() *Platform {
+	for _, p := range g.platforms {
+		if !p.visited {
+			return p
+		}
+	}
+	return nil
 }
 
 // heightAfterXFramesOfJumping assumes that player is moving at top speed
@@ -237,13 +225,28 @@ func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) (y float
 	return finalY, velocity
 }
 
-func (g *Game) NextUnvisitedPlatform() *Platform {
-	for _, p := range g.platforms {
-		if !p.visited {
-			return p
+func (g *Game) playerHasMoreRunway() bool {
+	for i, platform := range g.platforms {
+		if g.playerOnPlatform(*platform) {
+			if g.platforms[i+1].y+80 <= platform.y { // this assumes there is always a platform after the one the player is on
+				return false
+			}
+			return platform.x+platform.width > g.player.x+50
 		}
 	}
-	return nil
+	return false
+}
+
+func (g *Game) applyBotGravity() {
+	currentGravity := gravity
+	if g.player.velocityY > 0 {
+		currentGravity = heavyGravity
+	} else if botFramesLeftJumping > 0 {
+		currentGravity = lightGravity
+		botFramesLeftJumping--
+	}
+	g.player.velocityY += currentGravity
+	g.player.y += g.player.velocityY
 }
 
 func (g *Game) playerControls() {
@@ -264,40 +267,20 @@ func (g *Game) playerControls() {
 	}
 }
 
-func (g *Game) botShouldJump() bool {
-	platformPos := g.NextUnvisitedPlatform()
-	numFrames := (platformPos.x - g.player.x) / g.player.maxPlayerSpeed
-	for i := range 30 {
-		newY, newVelocityY := g.heightAfterXFramesOfJumping(i, int(numFrames)+1)
-		if newY < platformPos.y && newVelocityY > 0 {
-			if i > 1 && g.playerHasMoreRunway() {
-				return false
-			}
-			botFramesLeftJumping = i
-			return true
-		}
-	}
-	return false
-}
-
-func (g *Game) playerHasMoreRunway() bool {
-	for i, platform := range g.platforms {
-		if g.playerOnPlatform(*platform) {
-			if g.platforms[i+1].y+80 <= platform.y { // this assumes there is always a platform after the one the player is on
-				return false
-			}
-			return platform.x+platform.width > g.player.x+50
-		}
-	}
-	return false
-}
-
 func (g *Game) slowPlayer() {
 	g.player.velocityX *= .8
 }
 
-func (g *Game) playerCanJump() bool {
-	return !g.playerInAir()
+func (g *Game) applyGravity() {
+	// todo make this use a function that can be called by applyBotGravity and heightAfterXFramesOfJumping
+	currentGravity := gravity
+	if g.player.velocityY > 0 {
+		currentGravity = heavyGravity
+	} else if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+		currentGravity = lightGravity
+	}
+	g.player.velocityY += currentGravity
+	g.player.y += g.player.velocityY
 }
 
 func (g *Game) handlePlatformCollision(prevX float64) {
@@ -332,6 +315,18 @@ func (g *Game) handlePlatformCollision(prevX float64) {
 	}
 }
 
+func (g *Game) playerOnPlatform(p Platform) bool {
+	// Check if player is within platform's horizontal range
+	playerRight := g.player.x + playerSize
+	playerLeft := g.player.x
+	platformRight := p.x + p.width
+	platformLeft := p.x
+
+	// **Vertical collision (Landing on platform)**
+	return playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
+		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
+}
+
 func (g *Game) handleScreenBounds() {
 	if g.player.x < g.cameraX {
 		g.player.x = g.cameraX
@@ -347,44 +342,18 @@ func (g *Game) handleCameraMovement() {
 	}
 }
 
-func (g *Game) applyGravity() {
-	// todo make this use a function that can be called by applyBotGravity and heightAfterXFramesOfJumping
-	currentGravity := gravity
-	if g.player.velocityY > 0 {
-		currentGravity = heavyGravity
-	} else if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		currentGravity = lightGravity
-	}
-	g.player.velocityY += currentGravity
-	g.player.y += g.player.velocityY
-}
+////////////////////////////////////////////////////////////////////////
 
-func (g *Game) applyBotGravity() {
-	currentGravity := gravity
-	if g.player.velocityY > 0 {
-		currentGravity = heavyGravity
-	} else if botFramesLeftJumping > 0 {
-		currentGravity = lightGravity
-		botFramesLeftJumping--
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.drawBackgroundLayers(screen)
+	if g.gameOver {
+		g.drawGameOverScreen(screen)
+	} else if bot {
+		g.drawBotScreen(screen)
 	}
-	g.player.velocityY += currentGravity
-	g.player.y += g.player.velocityY
-}
-
-func (g *Game) handlePlayer() {
-	if bot {
-		g.botLogic()
-		g.applyBotGravity()
-	} else {
-		g.playerControls()
-		g.applyGravity()
-	}
-}
-
-func (g *Game) debug() {
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
-	}
+	g.drawScore(screen)
+	g.drawPlatforms(screen)
+	g.player.Draw(screen, g.cameraX)
 }
 
 func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
@@ -416,8 +385,44 @@ func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
 	}
 }
 
-func (g *Game) handleBackgroundLayers() {
-	for i := range g.backgroundLayers {
-		g.backgroundLayers[i].OffsetX = -g.cameraX * g.backgroundLayers[i].Speed
+func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
+	gameOverText := "That's not a rooftop geocode!"
+	restartText := "Press Enter to Restart"
+
+	gameOverWidth := font.MeasureString(g.font, gameOverText).Ceil()
+	restartWidth := font.MeasureString(g.font, restartText).Ceil()
+
+	gameOverX := (screenWidth - gameOverWidth) / 2
+	restartX := (screenWidth - restartWidth) / 2
+
+	text.Draw(screen, gameOverText, g.font, gameOverX, 60, colorText)
+	text.Draw(screen, restartText, g.font, restartX, 90, colorText)
+}
+
+func (g *Game) drawBotScreen(screen *ebiten.Image) {
+	botText := "You can't be trusted to do it yourself."
+	botText2 := "Now you have to use Smarty."
+
+	botWidth := font.MeasureString(g.font, botText).Ceil()
+	botWidth2 := font.MeasureString(g.font, botText2).Ceil()
+
+	botTextX := (screenWidth - botWidth) / 2
+	botTextX2 := (screenWidth - botWidth2) / 2
+
+	text.Draw(screen, botText, g.font, botTextX, 60, colorText)
+	text.Draw(screen, botText2, g.font, botTextX2, 80, colorText)
+}
+
+func (g *Game) drawPlatforms(screen *ebiten.Image) {
+	for _, p := range g.platforms {
+		p.Draw(screen, g.cameraX)
 	}
 }
+
+func (g *Game) drawScore(screen *ebiten.Image) {
+	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
+}
+
+////////////////////////////////////////////////////////////////////////
+
+func (g *Game) Layout(_, _ int) (int, int) { return screenWidth, screenHeight }
