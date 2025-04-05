@@ -38,13 +38,14 @@ var (
 )
 
 type Game struct {
-	player           *Player
-	platforms        []*Platform
-	cameraX          float64
-	score            int // Score counter
-	gameOver         bool
 	font             font.Face
 	backgroundLayers []Layer
+	platforms        []*Platform
+	player           *Player
+	cameraX          float64
+	score            int
+	gameStarted      bool
+	gameOver         bool
 }
 
 func NewGame() *Game {
@@ -67,24 +68,26 @@ func (g *Game) initPlatforms() {
 
 func (g *Game) Update() error {
 	g.handleBackgroundLayers()
-	g.handlePlatforms()
-	g.debug()
-	g.checkGameOver()
+	if g.gameStarted {
+		g.handlePlatforms()
+		g.debug()
+		g.checkGameOver()
 
-	// If game over, reset the game when enter key is pressed
-	if g.gameOver {
-		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
-			if g.player.x < g.getFirstPlatform().GetX() {
-				bot = true
+		// If game over, reset the game when enter key is pressed
+		if g.gameOver {
+			if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+				if g.player.x < g.getFirstPlatform().GetX() {
+					bot = true
+				}
+				g.startOver()
 			}
-			g.startOver()
+		} else {
+			prevX := g.player.x // Store previous x position for side collision correction
+			g.handlePlayer()
+			g.handlePlatformCollision(prevX)
+			g.handleScreenBounds()
+			g.handleCameraMovement()
 		}
-	} else {
-		prevX := g.player.x // Store previous x position for side collision correction
-		g.handlePlayer()
-		g.handlePlatformCollision(prevX)
-		g.handleScreenBounds()
-		g.handleCameraMovement()
 	}
 	return nil
 }
@@ -346,14 +349,26 @@ func (g *Game) handleCameraMovement() {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.drawBackgroundLayers(screen)
-	if g.gameOver {
-		g.drawGameOverScreen(screen)
-	} else if bot {
-		g.drawBotScreen(screen)
+
+	// Title
+	if !g.gameStarted {
+		g.drawTitleText(screen, "Click anywhere to start", 200)
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			g.gameStarted = true
+		}
+	} else {
+		// Game Started
+		if g.gameOver {
+			g.drawGameOverScreen(screen)
+		}
+
+		if bot {
+			g.drawBotScreen(screen)
+		}
+		g.drawScore(screen)
+		g.drawPlatforms(screen)
+		g.player.Draw(screen, g.cameraX)
 	}
-	g.drawScore(screen)
-	g.drawPlatforms(screen)
-	g.player.Draw(screen, g.cameraX)
 }
 
 func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
@@ -386,31 +401,40 @@ func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
 }
 
 func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
-	gameOverText := "That's not a rooftop geocode!"
-	restartText := "Press Enter to Restart"
-
-	gameOverWidth := font.MeasureString(g.font, gameOverText).Ceil()
-	restartWidth := font.MeasureString(g.font, restartText).Ceil()
-
-	gameOverX := (screenWidth - gameOverWidth) / 2
-	restartX := (screenWidth - restartWidth) / 2
-
-	text.Draw(screen, gameOverText, g.font, gameOverX, 60, colorText)
-	text.Draw(screen, restartText, g.font, restartX, 90, colorText)
+	g.drawText(screen, "That's not a rooftop geocode!", 60)
+	g.drawText(screen, "Press Enter to Restart", 90)
 }
 
 func (g *Game) drawBotScreen(screen *ebiten.Image) {
-	botText := "You can't be trusted to do it yourself."
-	botText2 := "Now you have to use Smarty."
+	g.drawText(screen, "You can't be trusted to do it yourself.", 60)
+	g.drawText(screen, "Now you have to use Smarty.", 80)
+}
 
-	botWidth := font.MeasureString(g.font, botText).Ceil()
-	botWidth2 := font.MeasureString(g.font, botText2).Ceil()
+func (g *Game) drawText(screen *ebiten.Image, content string, y int) {
+	textWidth := font.MeasureString(g.font, content).Ceil()
+	x := (screenWidth - textWidth) / 2
+	text.Draw(screen, content, g.font, x, y, colorText)
+}
 
-	botTextX := (screenWidth - botWidth) / 2
-	botTextX2 := (screenWidth - botWidth2) / 2
+func (g *Game) drawTitleText(screen *ebiten.Image, content string, y int) {
+	// Measure text size
+	bounds := text.BoundString(g.font, content)
+	width := bounds.Dx()
+	height := bounds.Dy()
+	// Create a temporary image to draw the original text
+	textImage := ebiten.NewImage(width, height)
+	text.Draw(textImage, content, g.font, 0, g.font.Metrics().Ascent.Ceil(), colorText)
 
-	text.Draw(screen, botText, g.font, botTextX, 60, colorText)
-	text.Draw(screen, botText2, g.font, botTextX2, 80, colorText)
+	// Scale the image 2x
+	scale := 2.0
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+
+	// Center it horizontally on the screen
+	x := float64((screenWidth - int(float64(width)*scale)) / 2)
+	op.GeoM.Translate(x, float64(y))
+
+	screen.DrawImage(textImage, op)
 }
 
 func (g *Game) drawPlatforms(screen *ebiten.Image) {
