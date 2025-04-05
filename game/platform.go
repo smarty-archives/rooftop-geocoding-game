@@ -1,11 +1,13 @@
 package game
 
 import (
+	"image/color"
 	"log"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
 
@@ -96,6 +98,9 @@ func (p *Platform) Draw2(screen *ebiten.Image, cameraX float64) {
 }
 
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
+	if debugMode {
+		p.drawHitBox(screen, cameraX)
+	}
 	platformCoor := &ebiten.DrawImageOptions{}
 	scaleX, scaleY := 1.0, 1.0
 	//scaleX := p.width / float64(p.image.Bounds().Dx())
@@ -104,4 +109,8 @@ func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
 	platformCoor.GeoM.Scale(scaleX, scaleY)
 	platformCoor.GeoM.Translate(x, p.y)
 	screen.DrawImage(p.image, platformCoor)
+}
+
+func (p *Platform) drawHitBox(screen *ebiten.Image, cameraX float64) {
+	vector.DrawFilledRect(screen, float32(p.x-cameraX), float32(p.y), float32(p.width), float32(maxPlatformHeight), color.RGBA{R: 255}, false)
 }

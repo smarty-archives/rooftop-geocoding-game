@@ -1,7 +1,10 @@
 package game
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
 
@@ -13,9 +16,14 @@ const (
 	startingMaxPlayerSpeed     = 4
 )
 
+type HitBox struct {
+	width, height float64
+}
+
 type Player struct {
 	Pos
 	Stats
+	HitBox
 	velocityX float64
 	velocityY float64
 	isJumping bool
@@ -35,6 +43,8 @@ func (p *Player) ResetPlayer() {
 	p.jumpForce = startingJumpForce
 	p.playerAcceleration = startingPlayerAcceleration
 	p.maxPlayerSpeed = startingMaxPlayerSpeed
+	p.width = 20
+	p.height = playerSize
 	image, err := media.Instance.LoadRunningImage(0)
 	if err != nil {
 		panic(err)
@@ -76,20 +86,26 @@ func (p *Player) SetStats(jumpForce, playerSpeed, maxPlayerSpeed float64) {
 }
 
 func (p *Player) Draw(screen *ebiten.Image, cameraX float64) {
+	if debugMode {
+		p.DrawHitBox(screen, cameraX)
+	}
 	p.cycleImage()
 	// todo move some stuff to init
 	playerCoor := &ebiten.DrawImageOptions{}
 	scaleX := playerSize / float64(p.image.Bounds().Dx())
-	scaleY := playerSize / float64(p.image.Bounds().Dy())
+	scaleY := scaleX
 	x := p.x - cameraX
 	if p.velocityX < 0 {
 		scaleX = -scaleX
-		//playerCoor.GeoM.Translate(playerSize, 0)
 		x += playerSize
 	}
 	playerCoor.GeoM.Scale(scaleX, scaleY)
 	playerCoor.GeoM.Translate(x, p.y)
 	screen.DrawImage(p.image, playerCoor)
+}
+
+func (p *Player) DrawHitBox(screen *ebiten.Image, cameraX float64) {
+	vector.DrawFilledRect(screen, float32(p.x-cameraX+p.width/2), float32(p.y), float32(p.width), float32(p.height), color.RGBA{R: 255}, false)
 }
 
 func (p *Player) cycleImage() {
@@ -98,5 +114,12 @@ func (p *Player) cycleImage() {
 	}
 	p.animation = p.animation.getNextState(p)
 	p.animation.doState(p)
-	//p.image = p.animation.GetImage()
+}
+
+func (p *Player) LeftX() float64 {
+	return p.x + playerSize/2 - p.width/2
+}
+
+func (p *Player) RightX() float64 {
+	return p.x + playerSize/2 + p.width/2
 }

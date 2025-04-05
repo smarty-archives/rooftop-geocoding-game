@@ -35,6 +35,7 @@ var (
 	colorText            = color.Black
 	bot                  = false
 	botFramesLeftJumping = 0
+	debugMode            = false
 )
 
 type Game struct {
@@ -70,7 +71,7 @@ func (g *Game) Update() error {
 	g.handleBackgroundLayers()
 	if g.gameStarted {
 		g.handlePlatforms()
-		g.debug()
+		//g.debug()
 		g.checkGameOver()
 
 		// If game over, reset the game when enter key is pressed
@@ -82,9 +83,11 @@ func (g *Game) Update() error {
 				g.startOver()
 			}
 		} else {
-			prevX := g.player.x // Store previous x position for side collision correction
+			//prevX := g.player.x // Store previous x position for side collision correction
+			prevLeft := g.player.LeftX()
+			prevRight := g.player.RightX()
 			g.handlePlayer()
-			g.handlePlatformCollision(prevX)
+			g.handlePlatformCollision(prevLeft, prevRight)
 			g.handleScreenBounds()
 			g.handleCameraMovement()
 		}
@@ -125,7 +128,9 @@ func (g *Game) distToFirstPlatform() float64 {
 
 func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		//fmt.Printf("Total Platforms: %d\n", len(g.platforms))
+		debugMode = true
+	} else {
+		debugMode = false
 	}
 }
 
@@ -286,7 +291,7 @@ func (g *Game) applyGravity() {
 	g.player.y += g.player.velocityY
 }
 
-func (g *Game) handlePlatformCollision(prevX float64) {
+func (g *Game) handlePlatformCollision(prevLeft, prevRight float64) {
 	for _, p := range g.platforms {
 		// **Vertical collision (Landing on platform)**
 		if g.playerOnPlatform(*p) {
@@ -300,18 +305,17 @@ func (g *Game) handlePlatformCollision(prevX float64) {
 				g.score++
 			}
 		}
-
-		playerRight := g.player.x + playerSize
-		playerLeft := g.player.x
-		platformRight := p.x + p.width
 		platformLeft := p.x
+		platformRight := p.x + p.width
 		// **Side collision (Hitting the sides of the platform)**
 		if g.player.y+playerSize > p.y { // Player is below platform surface
-			if prevX+playerSize <= platformLeft && playerRight > platformLeft { // Hitting left side
-				g.player.x = platformLeft - playerSize
+			if prevRight <= platformLeft && g.player.RightX() > platformLeft { // Hitting left side
+				// Move player to edge of platform
+				g.player.x = platformLeft - g.player.width/2 - playerSize/2
 				g.player.velocityX = 0
-			} else if prevX >= platformRight && playerLeft < platformRight { // Hitting right side
-				g.player.x = platformRight
+			} else if prevLeft >= platformRight && g.player.LeftX() < platformRight { // Hitting right side
+				// Move player to edge of platform
+				g.player.x = platformRight + g.player.width/2 - playerSize/2
 				g.player.velocityX = 0
 			}
 		}
@@ -320,13 +324,11 @@ func (g *Game) handlePlatformCollision(prevX float64) {
 
 func (g *Game) playerOnPlatform(p Platform) bool {
 	// Check if player is within platform's horizontal range
-	playerRight := g.player.x + playerSize
-	playerLeft := g.player.x
 	platformRight := p.x + p.width
 	platformLeft := p.x
 
 	// **Vertical collision (Landing on platform)**
-	return playerRight > platformLeft && playerLeft < platformRight && // Player overlaps horizontally
+	return g.player.RightX() > platformLeft && g.player.LeftX() < platformRight && // Player overlaps horizontally
 		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
 }
 
