@@ -45,27 +45,22 @@ func GenerateNewRandomPlatform(prevPlatform *Platform, score int) *Platform {
 }
 
 func pickWidth(counter int, numbers ...float64) float64 {
-	// Define weight distribution based on counter value
-	weights := []float64{0.5, 0.4, 0.1, 0, 0} // Initial probabilities
-
+	var weights []float64
 	// As counter increases, shift probability towards later numbers
-	if counter > 50 {
-		weights = []float64{0.37, 0.3, 0.3, 0.02, 0.01}
-	}
-	if counter > 100 {
-		weights = []float64{0.5, 0.3, 0.1, 0.05, 0.05}
-	}
-	if counter > 150 {
-		weights = []float64{0.3, 0.2, 0.2, 0.15, 0.15}
-	}
-	if counter > 200 {
-		weights = []float64{0.15, 0.15, 0.25, 0.25, 0.2}
-	}
-	if counter > 250 {
-		weights = []float64{0.05, 0.05, 0.3, 0.3, 0.3}
-	}
-	if counter > 300 {
+	if counter > 60 {
 		weights = []float64{0.01, 0.02, 0.3, 0.3, 0.37}
+	} else if counter > 50 {
+		weights = []float64{0.05, 0.05, 0.3, 0.3, 0.3}
+	} else if counter > 40 {
+		weights = []float64{0.15, 0.15, 0.25, 0.25, 0.2}
+	} else if counter > 30 {
+		weights = []float64{0.3, 0.2, 0.2, 0.15, 0.15}
+	} else if counter > 20 {
+		weights = []float64{0.5, 0.3, 0.1, 0.05, 0.05}
+	} else if counter > 10 {
+		weights = []float64{0.37, 0.3, 0.3, 0.02, 0.01}
+	} else {
+		weights = []float64{0.5, 0.4, 0.1, 0, 0}
 	}
 
 	// Pick a number based on weighted probabilities
