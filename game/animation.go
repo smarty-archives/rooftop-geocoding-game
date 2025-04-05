@@ -82,7 +82,7 @@ type RunningState struct {
 }
 
 func (state *RunningState) getImage() *ebiten.Image {
-	image, err := media.Instance.LoadPlayerImage(state.getImageNum())
+	image, err := media.Instance.LoadRunningImage(state.getImageNum())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,7 +112,7 @@ type JumpingState struct {
 }
 
 func (state *JumpingState) getImage() *ebiten.Image {
-	image, err := media.Instance.LoadPlayerImage(state.getImageNum())
+	image, err := media.Instance.LoadRunningImage(state.getImageNum())
 	if err != nil {
 		log.Fatal(err)
 	}

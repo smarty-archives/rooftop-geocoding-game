@@ -35,7 +35,7 @@ func (p *Player) ResetPlayer() {
 	p.jumpForce = startingJumpForce
 	p.playerAcceleration = startingPlayerAcceleration
 	p.maxPlayerSpeed = startingMaxPlayerSpeed
-	image, err := media.Instance.LoadPlayerImage(0)
+	image, err := media.Instance.LoadRunningImage(0)
 	if err != nil {
 		panic(err)
 	}

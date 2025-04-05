@@ -15,7 +15,6 @@ const (
 	screenWidth            = 640
 	screenHeight           = 480
 	playerSize             = 40
-	coinSize               = 20
 	platformSpacing        = 100
 	maxYDeltaTop           = 120
 	minimumPlatformHeight  = 20
@@ -46,7 +45,6 @@ type Game struct {
 	gameOver         bool
 	font             font.Face
 	backgroundLayers []Layer
-	coin             *Coin
 }
 
 func NewGame() *Game {
@@ -55,7 +53,6 @@ func NewGame() *Game {
 	g.player = NewPlayer()
 	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
 	g.backgroundLayers = NewLayers()
-	g.coin = NewCoin()
 	return g
 }
 
@@ -423,13 +420,4 @@ func (g *Game) handleBackgroundLayers() {
 	for i := range g.backgroundLayers {
 		g.backgroundLayers[i].OffsetX = -g.cameraX * g.backgroundLayers[i].Speed
 	}
-}
-
-func (g *Game) drawCoin(screen *ebiten.Image, p *Platform) {
-	op := &ebiten.DrawImageOptions{}
-	scaleX := coinSize / float64(g.coin.Image.Bounds().Dx())
-	scaleY := coinSize / float64(g.coin.Image.Bounds().Dy())
-	op.GeoM.Scale(scaleX, scaleY)
-	op.GeoM.Translate(p.x+p.width/2-g.cameraX-coinSize/2, p.y-coinSize*1.5)
-	screen.DrawImage(g.coin.Image, op)
 }

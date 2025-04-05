@@ -12,11 +12,10 @@ import (
 
 const (
 	imagesFilePath          = "assets/images/"
-	playerImageFileName     = "guy"
+	runningImageFileName    = "guy"
 	idleImageFileName       = "idle"
 	backgroundImageFileName = "layer"
 	buildingImageFileName   = "building"
-	coinImageFileName       = "coin"
 	imageFileExtension      = ".png"
 	NumPlayerImages         = 8
 	NumIdleImages           = 2
@@ -29,7 +28,6 @@ type Manager struct {
 	idleImages       map[string]*ebiten.Image
 	backgroundImages map[string]*ebiten.Image
 	buildingImages   map[string]*ebiten.Image
-	coinImage        *ebiten.Image
 }
 
 var (
@@ -42,61 +40,16 @@ func init() {
 }
 
 func NewManager() *Manager {
-	result := &Manager{
-		playerImages:     make(map[string]*ebiten.Image),
-		idleImages:       make(map[string]*ebiten.Image),
-		backgroundImages: make(map[string]*ebiten.Image),
-		buildingImages:   make(map[string]*ebiten.Image),
-	}
-	// todo make function for these loops
-	// Running Images
-	for i := range NumPlayerImages {
-		fileName := buildPlayerImageFileName(i)
-		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-		if err != nil {
-			log.Fatal(err)
-		}
-		result.playerImages[fileName] = image
-	}
-	// Idle Images
-	for i := range NumIdleImages {
-		fileName := buildIdleImageFileName(i)
-		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-		if err != nil {
-			log.Fatal(err)
-		}
-		result.idleImages[fileName] = image
-	}
-	// Background Images
-	for i := range NumBackgroundLayers {
-		fileName := buildBackgroundImageFileName(i)
-		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-		if err != nil {
-			log.Fatal(err)
-		}
-		result.backgroundImages[fileName] = image
-	}
-	// Building Images
-	for i := range NumBuildingImages {
-		fileName := buildBuildingImageFileName(i)
-		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-		if err != nil {
-			log.Fatal(err)
-		}
-		result.buildingImages[fileName] = image
-	}
-	// Coin Image
-	fileName := buildCoinImageFileName()
-	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-	if err != nil {
-		log.Fatal(err)
-	}
-	result.coinImage = image
+	result := &Manager{}
+	result.initializeRunningImages()
+	result.initializeIdleImages()
+	result.initializeBackgroundImages()
+	result.initializeBuildingImages()
 	return result
 }
 
-func (m *Manager) LoadPlayerImage(i int) (*ebiten.Image, error) {
-	fileName := buildPlayerImageFileName(i)
+func (m *Manager) LoadRunningImage(i int) (*ebiten.Image, error) {
+	fileName := buildRunningImageFileName(i)
 	image, ok := m.playerImages[fileName]
 	if !ok {
 		return nil, errImageNotFound
@@ -131,12 +84,56 @@ func (m *Manager) LoadBuildingImage(i int) (*ebiten.Image, error) {
 	return image, nil
 }
 
-func (m *Manager) LoadCoinImage() (*ebiten.Image, error) {
-	return m.coinImage, nil
+func (m *Manager) initializeRunningImages() {
+	m.playerImages = make(map[string]*ebiten.Image)
+	for i := range NumPlayerImages {
+		fileName := buildRunningImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.playerImages[fileName] = image
+	}
 }
 
-func buildPlayerImageFileName(i int) string {
-	return fmt.Sprintf("%s%d%s", playerImageFileName, i, imageFileExtension)
+func (m *Manager) initializeIdleImages() {
+	m.idleImages = make(map[string]*ebiten.Image)
+	for i := range NumIdleImages {
+		fileName := buildIdleImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.idleImages[fileName] = image
+	}
+}
+
+func (m *Manager) initializeBackgroundImages() {
+	m.backgroundImages = make(map[string]*ebiten.Image)
+	for i := range NumBackgroundLayers {
+		fileName := buildBackgroundImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.backgroundImages[fileName] = image
+	}
+}
+
+func (m *Manager) initializeBuildingImages() {
+	m.buildingImages = make(map[string]*ebiten.Image)
+	for i := range NumBuildingImages {
+		fileName := buildBuildingImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.buildingImages[fileName] = image
+	}
+}
+
+func buildRunningImageFileName(i int) string {
+	return fmt.Sprintf("%s%d%s", runningImageFileName, i, imageFileExtension)
 }
 
 func buildIdleImageFileName(i int) string {
@@ -149,8 +146,4 @@ func buildBackgroundImageFileName(i int) string {
 
 func buildBuildingImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", buildingImageFileName, i, imageFileExtension)
-}
-
-func buildCoinImageFileName() string {
-	return fmt.Sprintf("%s%s", coinImageFileName, imageFileExtension)
 }
