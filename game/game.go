@@ -1,8 +1,12 @@
 package game
 
 import (
+	"fmt"
 	"image/color"
 	"math"
+	"math/rand"
+	"slices"
+	"sort"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -16,6 +20,7 @@ const (
 	screenHeight           = 480
 	playerSize             = 40
 	platformSpacing        = 100
+	cloudSpacing           = 100
 	maxYDeltaTop           = 120
 	minimumPlatformHeight  = 20
 	maxPlatformHeight      = 285 // this is a little bit less than the height of the building assets
@@ -42,20 +47,54 @@ type Game struct {
 	font             font.Face
 	backgroundLayers []Layer
 	platforms        []*Platform
-	player           *Player
-	cameraX          float64
-	score            int
-	gameStarted      bool
-	gameOver         bool
+	clouds           []*Cloud
+	//clouds      map[float64][]*Cloud todo use map organized by speeds
+	player      *Player
+	cameraX     float64
+	score       int
+	gameStarted bool
+	gameOver    bool
+	cloudOffset float64
 }
 
 func NewGame() *Game {
 	g := &Game{}
+	g.initClouds()
 	g.initPlatforms()
 	g.player = NewPlayer()
 	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
 	g.backgroundLayers = NewLayers()
 	return g
+}
+
+func (g *Game) initClouds() {
+	g.clouds = []*Cloud{NewCloud(20, g.randomCloudHeight(), .5)}
+	for _ = range 10 {
+		g.clouds = append(g.clouds, g.generateNewRandomCloud())
+	}
+}
+
+func (g *Game) generateNewRandomCloud() *Cloud {
+	prevCloud := g.getLastCloud()
+	randX := prevCloud.x + float64(prevCloud.Image.Bounds().Dx()) + giveOrTake(100, 75)
+	randY := g.randomCloudHeight()
+	randSpeed := pickRand(.4, .5, .6, .7)
+	return NewCloud(randX, randY, randSpeed)
+}
+
+func (g *Game) randomCloudHeight() float64 {
+	var cloudRange float64
+	if g.score > 90 {
+		cloudRange = 1.0
+	} else if g.score > 80 {
+		cloudRange = .66
+	} else if g.score > 70 {
+		cloudRange = .5
+	} else {
+		cloudRange = .33
+	}
+
+	return rand.Float64()*cloudRange*screenHeight + 20
 }
 
 func (g *Game) initPlatforms() {
@@ -69,9 +108,10 @@ func (g *Game) initPlatforms() {
 
 func (g *Game) Update() error {
 	g.handleBackgroundLayers()
+	g.handleBackgroundClouds()
 	if g.gameStarted {
 		g.handlePlatforms()
-		//g.debug()
+		g.debug()
 		g.checkGameOver()
 
 		// If game over, reset the game when enter key is pressed
@@ -99,6 +139,33 @@ func (g *Game) handleBackgroundLayers() {
 	for i := range g.backgroundLayers {
 		g.backgroundLayers[i].OffsetX = -g.cameraX * g.backgroundLayers[i].Speed
 	}
+}
+
+func (g *Game) handleBackgroundClouds() {
+	// Generate New
+	if g.distToLastCloud() < screenWidth/2 {
+		g.clouds = append(g.clouds, g.generateNewRandomCloud())
+	}
+	// Cleanup
+	for i := range g.clouds {
+		if g.clouds[i].getOffsetX(g.cameraX) < -screenWidth {
+			g.clouds[i] = g.generateNewRandomCloud()
+		}
+	}
+}
+
+func (g *Game) distToLastCloud() float64 {
+	return g.player.GetDist(g.getLastCloud())
+}
+
+func (g *Game) getLastCloud() *Cloud {
+	lastCloud := g.clouds[0]
+	for i := range g.clouds {
+		if g.clouds[i].getOffsetX(g.cameraX) > lastCloud.getOffsetX(g.cameraX) {
+			lastCloud = g.clouds[i]
+		}
+	}
+	return lastCloud
 }
 
 func (g *Game) handlePlatforms() {
@@ -129,6 +196,7 @@ func (g *Game) distToFirstPlatform() float64 {
 func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		debugMode = true
+		fmt.Println(g.clouds[0].GetX(), g.clouds[0].getOffsetX(g.cameraX))
 	} else {
 		debugMode = false
 	}
@@ -354,22 +422,23 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Title
 	if !g.gameStarted {
+		g.drawBackgroundClouds(screen)
 		g.drawTitleText(screen, "Click anywhere to start", 200)
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			g.gameStarted = true
 		}
 	} else {
 		// Game Started
+		g.drawPlatforms(screen)
+		g.player.Draw(screen, g.cameraX)
+		g.drawBackgroundClouds(screen)
 		if g.gameOver {
 			g.drawGameOverScreen(screen)
 		}
-
 		if bot {
 			g.drawBotScreen(screen)
 		}
 		g.drawScore(screen)
-		g.drawPlatforms(screen)
-		g.player.Draw(screen, g.cameraX)
 	}
 }
 
@@ -398,6 +467,24 @@ func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
 			op.GeoM.Scale(scaleX, scaleY)
 			op.GeoM.Translate(x, 0)
 			screen.DrawImage(layer.Image, op)
+		}
+	}
+}
+
+func (g *Game) drawBackgroundClouds(screen *ebiten.Image) {
+	speedMap := map[float64][]*Cloud{}
+	var speeds []float64
+	for i := range g.clouds {
+		s := g.clouds[i].Speed
+		if !slices.Contains(speeds, s) {
+			speeds = append(speeds, s)
+		}
+		speedMap[s] = append(speedMap[s], g.clouds[i])
+	}
+	sort.Float64s(speeds)
+	for _, speed := range speeds {
+		for _, cloud := range speedMap[speed] {
+			cloud.Draw(screen, g.cameraX)
 		}
 	}
 }

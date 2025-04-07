@@ -77,13 +77,6 @@ func pickWidth(counter int, numbers ...float64) float64 {
 	return numbers[len(numbers)-1] // Fallback, should never happen
 }
 
-//func pickRand[T any](items ...T) (winner T) {
-//	if len(items) == 0 {
-//		return winner
-//	}
-//	return items[rand.Intn(len(items))]
-//}
-
 func giveOrTake(num, delta float64) float64 {
 	return float64(rand.Intn(int(num+delta)-int(num-delta))) + num - delta
 }
