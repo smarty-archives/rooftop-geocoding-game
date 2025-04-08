@@ -64,20 +64,23 @@ type Game struct {
 	shareButton *Button
 }
 
+var (
+	defaultFont = basicfont.Face7x13 // Use the default basic font from Ebiten
+)
+
 func NewGame() *Game {
 	g := &Game{}
 	g.initClouds()
 	g.initPlatforms()
 	g.player = NewPlayer()
-	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
+	g.font = defaultFont
 	g.backgroundLayers = NewLayers()
-	g.startButton = NewButton(startButtonCenterX, startButtonCenterY, 100, 50, func() {
+	g.startButton = NewTextButton(startButtonCenterX, startButtonCenterY, 100, 50, func() {
 		g.gameStarted = true
-	})
-	g.shareButton = NewButton(startButtonCenterX, 300, 50, 50, func() {
+	}, "Play")
+	g.shareButton = NewImageButton(startButtonCenterX, 300, 50, 50, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
-		fmt.Println("Copied to clipboard!")
-	})
+	}, media.Instance.GetCloudImage())
 	return g
 }
 
