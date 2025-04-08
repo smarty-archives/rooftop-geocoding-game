@@ -6,10 +6,11 @@ data:
 	cp -r ~/.cache/satisfy/platformer/* static/assets
 	cp files/* static/
 compile: data
+	mkdir -p assets
+	rm -r assets
+	cp -r static/assets .
 	GOOS=js GOARCH=wasm go build -o static/main.wasm
 serve: compile
 	go run http/main.go
 run: compile
-	rm -r assets
-	cp -r static/assets .
 	go run *.go

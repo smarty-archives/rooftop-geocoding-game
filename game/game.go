@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/smarty-archives/rooftop-geocoding-game/clipboard"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -34,6 +35,8 @@ const (
 	lightGravity           = 0.4
 	gravity                = 0.7
 	heavyGravity           = 0.8
+
+	gameLink = "http://localhost:8080"
 )
 
 var (
@@ -58,6 +61,7 @@ type Game struct {
 	gameOver    bool
 	cloudOffset float64
 	startButton *Button
+	shareButton *Button
 }
 
 func NewGame() *Game {
@@ -67,7 +71,13 @@ func NewGame() *Game {
 	g.player = NewPlayer()
 	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
 	g.backgroundLayers = NewLayers()
-	g.startButton = NewButton(startButtonCenterX, startButtonCenterY, 100, 50)
+	g.startButton = NewButton(startButtonCenterX, startButtonCenterY, 100, 50, func() {
+		g.gameStarted = true
+	})
+	g.shareButton = NewButton(startButtonCenterX, 300, 50, 50, func() {
+		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
+		fmt.Println("Copied to clipboard!")
+	})
 	return g
 }
 
@@ -120,6 +130,7 @@ func (g *Game) Update() error {
 
 		// If game over, reset the game when enter key is pressed
 		if g.gameOver {
+			g.shareButton.Update()
 			if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 				if g.player.x < g.getFirstPlatform().GetX() {
 					bot = true
@@ -136,9 +147,7 @@ func (g *Game) Update() error {
 			g.handleCameraMovement()
 		}
 	} else { // Title Page
-		if g.startButton.Pressed() {
-			g.gameStarted = true
-		}
+		g.startButton.Update()
 		//if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		//	g.gameStarted = true
 		//}
@@ -442,6 +451,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawBackgroundClouds(screen)
 		if g.gameOver {
 			g.drawGameOverScreen(screen)
+			g.shareButton.Draw(screen)
 		}
 		if bot {
 			g.drawBotScreen(screen)
