@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/smarty-archives/rooftop-geocoding-game/media"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 )
@@ -18,9 +19,10 @@ import (
 const (
 	screenWidth            = 640
 	screenHeight           = 480
+	startButtonCenterX     = screenWidth / 2
+	startButtonCenterY     = 400
 	playerSize             = 40
 	platformSpacing        = 100
-	cloudSpacing           = 100
 	maxYDeltaTop           = 120
 	minimumPlatformHeight  = 20
 	maxPlatformHeight      = 285 // this is a little bit less than the height of the building assets
@@ -55,6 +57,7 @@ type Game struct {
 	gameStarted bool
 	gameOver    bool
 	cloudOffset float64
+	startButton *Button
 }
 
 func NewGame() *Game {
@@ -64,6 +67,7 @@ func NewGame() *Game {
 	g.player = NewPlayer()
 	g.font = basicfont.Face7x13 // Use the default basic font from Ebiten
 	g.backgroundLayers = NewLayers()
+	g.startButton = NewButton(startButtonCenterX, startButtonCenterY, 100, 50)
 	return g
 }
 
@@ -107,11 +111,11 @@ func (g *Game) initPlatforms() {
 ////////////////////////////////////////////////////////////////////////
 
 func (g *Game) Update() error {
+	g.debug()
 	g.handleBackgroundLayers()
 	g.handleBackgroundClouds()
 	if g.gameStarted {
 		g.handlePlatforms()
-		g.debug()
 		g.checkGameOver()
 
 		// If game over, reset the game when enter key is pressed
@@ -131,6 +135,13 @@ func (g *Game) Update() error {
 			g.handleScreenBounds()
 			g.handleCameraMovement()
 		}
+	} else { // Title Page
+		if g.startButton.Pressed() {
+			g.gameStarted = true
+		}
+		//if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		//	g.gameStarted = true
+		//}
 	}
 	return nil
 }
@@ -420,15 +431,12 @@ func (g *Game) handleCameraMovement() {
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.drawBackgroundLayers(screen)
 
-	// Title
-	if !g.gameStarted {
+	if !g.gameStarted { // Title Page
 		g.drawBackgroundClouds(screen)
-		g.drawTitleText(screen, "Click anywhere to start", 200)
-		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			g.gameStarted = true
-		}
-	} else {
-		// Game Started
+		g.drawTitle(screen)
+		g.startButton.Draw(screen)
+		//g.drawTitleText(screen, "Click anywhere to start", 200)
+	} else { // Game Started
 		g.drawPlatforms(screen)
 		g.player.Draw(screen, g.cameraX)
 		g.drawBackgroundClouds(screen)
@@ -539,3 +547,22 @@ func (g *Game) drawScore(screen *ebiten.Image) {
 ////////////////////////////////////////////////////////////////////////
 
 func (g *Game) Layout(_, _ int) (int, int) { return screenWidth, screenHeight }
+
+func (g *Game) drawTitle(screen *ebiten.Image) {
+	titleCoor := &ebiten.DrawImageOptions{}
+	scaleX, scaleY := 1.0, 1.0
+	image := media.Instance.GetTitleImage()
+	x := float64(screenWidth/2 - image.Bounds().Dx()/2)
+	y := float64(screenHeight/2-image.Bounds().Dy()/2) - 50
+	titleCoor.GeoM.Scale(scaleX, scaleY)
+	titleCoor.GeoM.Translate(x, y)
+	screen.DrawImage(image, titleCoor)
+}
+
+//func (g *Game) drawTextCenteredOn(screen *ebiten.Image, text string, x, y float64) {
+//	textWidth := font.MeasureString(g.font, text).Ceil()
+//	textHeight := g.font.Metrics().Ascent.Ceil()
+//	x := (screenWidth - textWidth) / 2
+//	y := (screenWidth - textHeight) / 2
+//	text.Draw(screen, content, g.font, x, y, colorText)
+//}
