@@ -54,14 +54,14 @@ type Game struct {
 	platforms        []*Platform
 	clouds           []*Cloud
 	//clouds      map[float64][]*Cloud todo use map organized by speeds
+	geocodes    []*Geocode
 	player      *Player
+	startButton *Button
+	shareButton *Button
 	cameraX     float64
 	score       int
 	gameStarted bool
 	gameOver    bool
-	cloudOffset float64
-	startButton *Button
-	shareButton *Button
 }
 
 var (
@@ -141,19 +141,16 @@ func (g *Game) Update() error {
 				g.startOver()
 			}
 		} else {
-			//prevX := g.player.x // Store previous x position for side collision correction
 			prevLeft := g.player.LeftX()
 			prevRight := g.player.RightX()
 			g.handlePlayer()
 			g.handlePlatformCollision(prevLeft, prevRight)
 			g.handleScreenBounds()
 			g.handleCameraMovement()
+			g.handleGeocodes()
 		}
 	} else { // Title Page
 		g.startButton.Update()
-		//if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		//	g.gameStarted = true
-		//}
 	}
 	return nil
 }
@@ -165,6 +162,9 @@ func (g *Game) handleBackgroundLayers() {
 }
 
 func (g *Game) handleBackgroundClouds() {
+	if len(g.clouds) == 0 {
+		return
+	}
 	// Generate New
 	if g.distToLastCloud() < screenWidth/2 {
 		g.clouds = append(g.clouds, g.generateNewRandomCloud())
@@ -182,6 +182,9 @@ func (g *Game) distToLastCloud() float64 {
 }
 
 func (g *Game) getLastCloud() *Cloud {
+	if len(g.clouds) == 0 {
+		return nil
+	}
 	lastCloud := g.clouds[0]
 	for i := range g.clouds {
 		if g.clouds[i].getOffsetX(g.cameraX) > lastCloud.getOffsetX(g.cameraX) {
@@ -240,12 +243,15 @@ func (g *Game) startOver() {
 	g.resetGameState()
 	g.player.ResetPlayer()
 	g.initPlatforms()
+	g.initClouds()
 }
 
 // WARNING: getFirstPlatform will panic if you don't initialize the platforms after this
 func (g *Game) resetGameState() {
 	g.player.Reset()
 	g.platforms = g.platforms[:0]
+	g.clouds = g.clouds[:0]
+	g.geocodes = g.geocodes[:0]
 	g.cameraX = 0
 	g.score = 0
 	g.gameOver = false
@@ -394,6 +400,7 @@ func (g *Game) handlePlatformCollision(prevLeft, prevRight float64) {
 			if !p.visited {
 				p.visited = true
 				g.score++
+				g.addGeocode()
 			}
 		}
 		platformLeft := p.x
@@ -423,6 +430,13 @@ func (g *Game) playerOnPlatform(p Platform) bool {
 		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
 }
 
+func (g *Game) addGeocode() {
+	g.geocodes = append(g.geocodes, NewGeocode(Pos{
+		x: g.player.GetCenterX(),
+		y: g.player.GetY() - 20,
+	}))
+}
+
 func (g *Game) handleScreenBounds() {
 	if g.player.x < g.cameraX {
 		g.player.x = g.cameraX
@@ -436,6 +450,18 @@ func (g *Game) handleCameraMovement() {
 	if g.cameraX < 0 {
 		g.cameraX = 0
 	}
+}
+
+func (g *Game) handleGeocodes() {
+	fadeRate := 5
+	keep := g.geocodes[:0] // reuse the underlying array
+	for _, geocode := range g.geocodes {
+		geocode.opacity -= fadeRate
+		if geocode.opacity > 0 {
+			keep = append(keep, geocode)
+		}
+	}
+	g.geocodes = keep
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -459,6 +485,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if bot {
 			g.drawBotScreen(screen)
 		}
+		g.drawGeocodes(screen)
 		g.drawScore(screen)
 	}
 }
@@ -510,6 +537,17 @@ func (g *Game) drawBackgroundClouds(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) drawTitle(screen *ebiten.Image) {
+	titleCoor := &ebiten.DrawImageOptions{}
+	scaleX, scaleY := 1.0, 1.0
+	image := media.Instance.GetTitleImage()
+	x := float64(screenWidth/2 - image.Bounds().Dx()/2)
+	y := float64(screenHeight/2-image.Bounds().Dy()/2) - 50
+	titleCoor.GeoM.Scale(scaleX, scaleY)
+	titleCoor.GeoM.Translate(x, y)
+	screen.DrawImage(image, titleCoor)
+}
+
 func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
 	g.drawText(screen, "That's not a rooftop geocode!", 60)
 	g.drawText(screen, "Press Enter to Restart", 90)
@@ -520,6 +558,7 @@ func (g *Game) drawBotScreen(screen *ebiten.Image) {
 	g.drawText(screen, "Now you have to use Smarty.", 80)
 }
 
+// todo replace with drawTextCenteredOn
 func (g *Game) drawText(screen *ebiten.Image, content string, y int) {
 	textWidth := font.MeasureString(g.font, content).Ceil()
 	x := (screenWidth - textWidth) / 2
@@ -553,6 +592,12 @@ func (g *Game) drawPlatforms(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) drawGeocodes(screen *ebiten.Image) {
+	for _, geocode := range g.geocodes {
+		geocode.Draw(screen, g.font, g.cameraX)
+	}
+}
+
 func (g *Game) drawScore(screen *ebiten.Image) {
 	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
 }
@@ -561,21 +606,10 @@ func (g *Game) drawScore(screen *ebiten.Image) {
 
 func (g *Game) Layout(_, _ int) (int, int) { return screenWidth, screenHeight }
 
-func (g *Game) drawTitle(screen *ebiten.Image) {
-	titleCoor := &ebiten.DrawImageOptions{}
-	scaleX, scaleY := 1.0, 1.0
-	image := media.Instance.GetTitleImage()
-	x := float64(screenWidth/2 - image.Bounds().Dx()/2)
-	y := float64(screenHeight/2-image.Bounds().Dy()/2) - 50
-	titleCoor.GeoM.Scale(scaleX, scaleY)
-	titleCoor.GeoM.Translate(x, y)
-	screen.DrawImage(image, titleCoor)
+func (g *Game) drawTextCenteredOn(screen *ebiten.Image, content string, x, y int) {
+	textWidth := font.MeasureString(g.font, content).Ceil()
+	textHeight := g.font.Metrics().Ascent.Ceil()
+	drawX := x - textWidth/2
+	drawY := y - textHeight/2
+	text.Draw(screen, content, g.font, drawX, drawY, colorText)
 }
-
-//func (g *Game) drawTextCenteredOn(screen *ebiten.Image, text string, x, y float64) {
-//	textWidth := font.MeasureString(g.font, text).Ceil()
-//	textHeight := g.font.Metrics().Ascent.Ceil()
-//	x := (screenWidth - textWidth) / 2
-//	y := (screenWidth - textHeight) / 2
-//	text.Draw(screen, content, g.font, x, y, colorText)
-//}

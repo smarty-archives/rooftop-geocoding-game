@@ -123,3 +123,7 @@ func (p *Player) LeftX() float64 {
 func (p *Player) RightX() float64 {
 	return p.x + playerSize/2 + p.width/2
 }
+
+func (p *Player) GetCenterX() float64 {
+	return p.x + playerSize/2
+}
