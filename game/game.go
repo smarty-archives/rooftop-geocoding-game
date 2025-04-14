@@ -36,7 +36,7 @@ const (
 	gravity                = 0.7
 	heavyGravity           = 0.8
 
-	gameLink = "http://localhost:8080"
+	gameLink = "www.smarty.com/geocode-jumper"
 )
 
 var (
