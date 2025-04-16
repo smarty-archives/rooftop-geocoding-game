@@ -36,13 +36,16 @@ func getPlatformIndex(width float64) int {
 
 func GenerateNewRandomPlatform(prevPlatform *Platform, score int) *Platform {
 	x := prevPlatform.x
+	minX := x + prevPlatform.width + platformSpacing - 50
+	maxX := x + prevPlatform.width + platformSpacing + 50
+	randX := float64(rand.Intn(int(maxX)-int(minX))) + minX
+
 	y := prevPlatform.y
 	minY := max(y-maxYDeltaTop, maxPlatformHeight)
 	maxY := float64(screenHeight - minimumPlatformHeight)
-	randX := x + prevPlatform.width + giveOrTake(platformSpacing, 50)
 	randY := float64(rand.Intn(int(maxY)-int(minY))) + minY
+	
 	randWidth := pickWidth(score, 175, 150, 125, 100, 75) // these numbers correspond to the widths of the building assets
-	//randWidth := giveOrTake(150, 75)
 	return NewPlatform(randX, randY, randWidth)
 }
 

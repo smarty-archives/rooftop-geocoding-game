@@ -291,7 +291,9 @@ func (g *Game) handlePlayer() {
 }
 
 func (g *Game) botLogic() {
-	g.player.AccelerateRight()
+	if g.botShouldAccelerateRight() {
+		g.player.AccelerateRight()
+	}
 	if g.playerCanJump() && g.botShouldJump() {
 		g.player.Jump()
 	}
@@ -320,7 +322,7 @@ func (g *Game) botShouldJump() bool {
 				return false
 			}
 			botFramesLeftJumping = i
-			return true
+			return g.player.velocityX > 2
 		}
 	}
 	return false
@@ -513,7 +515,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) DrawAllText(screen *ebiten.Image) {
 	if g.gameStarted {
-		if g.gameOver {
+		if g.gameOver && !bot {
 			g.drawGameOverScreen(screen)
 		}
 		g.drawGeocodes(screen)
@@ -643,4 +645,12 @@ func (g *Game) drawTextCenteredOn(screen *ebiten.Image, content string, x, y int
 	drawX := x - textWidth/2
 	drawY := y - textHeight/2
 	text.Draw(screen, content, g.font, drawX, drawY, colorText)
+}
+
+func (g *Game) botShouldAccelerateRight() bool {
+	platform := g.nextUnvisitedPlatform()
+	if g.player.x >= platform.x+(platform.width/2)-playerSize {
+		return false
+	}
+	return true
 }
