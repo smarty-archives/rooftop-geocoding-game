@@ -55,15 +55,14 @@ type Game struct {
 	backgroundLayers []Layer
 	platforms        []*Platform
 	clouds           []*Cloud
-	//clouds      map[float64][]*Cloud todo use map organized by speeds
-	geocodes    []*Geocode
-	player      *Player
-	startButton *Button
-	shareButton *Button
-	cameraX     float64
-	score       int
-	gameStarted bool
-	gameOver    bool
+	geocodes         []*Geocode
+	player           *Player
+	startButton      *Button
+	shareButton      *Button
+	cameraX          float64
+	score            int
+	gameStarted      bool
+	gameOver         bool
 }
 
 var (
@@ -272,7 +271,6 @@ func (g *Game) startOver() {
 
 // WARNING: getFirstPlatform will panic if you don't initialize the platforms after this
 func (g *Game) resetGameState() {
-	g.player.Reset()
 	g.platforms = g.platforms[:0]
 	g.clouds = g.clouds[:0]
 	g.geocodes = g.geocodes[:0]

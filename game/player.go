@@ -40,6 +40,9 @@ func NewPlayer() *Player {
 func (p *Player) ResetPlayer() {
 	p.x = screenWidth/2 - (playerSize / 2)
 	p.y = 0
+	p.velocityX = 0
+	p.velocityY = 0
+	p.isJumping = false
 	p.jumpForce = startingJumpForce
 	p.playerAcceleration = startingPlayerAcceleration
 	p.maxPlayerSpeed = startingMaxPlayerSpeed
@@ -51,13 +54,6 @@ func (p *Player) ResetPlayer() {
 	}
 	p.image = image
 	p.animation = &IdleState{}
-}
-
-func (p *Player) Reset() {
-	p.Pos.Reset()
-	p.velocityX = 0
-	p.velocityY = 0
-	p.isJumping = false
 }
 
 func (p *Player) Jump() {
