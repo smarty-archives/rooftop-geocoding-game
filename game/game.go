@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/smarty-archives/rooftop-geocoding-game/clipboard"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
@@ -35,6 +36,7 @@ const (
 	lightGravity           = 0.4
 	gravity                = 0.7
 	heavyGravity           = 0.8
+	maxNumberClouds        = 100
 
 	gameLink = "www.smarty.com/geocode-jumper"
 )
@@ -85,18 +87,37 @@ func NewGame() *Game {
 }
 
 func (g *Game) initClouds() {
-	g.clouds = []*Cloud{NewCloud(20, g.randomCloudHeight(), .5)}
-	for _ = range 10 {
-		g.clouds = append(g.clouds, g.generateNewRandomCloud())
+	g.clouds = []*Cloud{
+		NewCloud(20, g.randomStartingCloudHeight(), .5),
 	}
+	for _ = range 20 {
+		g.clouds = append(g.clouds, g.generateNewRandomStartingCloud())
+	}
+}
+
+func (g *Game) generateNewRandomStartingCloud() *Cloud {
+	prevCloud := g.getLastCloud()
+	randX := newRandomCloudX(prevCloud)
+	randY := g.randomStartingCloudHeight()
+	randSpeed := pickRand(.4, .5, .6, .7)
+	return NewCloud(randX, randY, randSpeed)
 }
 
 func (g *Game) generateNewRandomCloud() *Cloud {
 	prevCloud := g.getLastCloud()
-	randX := prevCloud.x + float64(prevCloud.Image.Bounds().Dx()) + giveOrTake(100, 75)
+	randX := newRandomCloudX(prevCloud)
 	randY := g.randomCloudHeight()
 	randSpeed := pickRand(.4, .5, .6, .7)
 	return NewCloud(randX, randY, randSpeed)
+}
+
+func newRandomCloudX(prevCloud *Cloud) float64 {
+	return prevCloud.x + float64(prevCloud.Image.Bounds().Dx()) + giveOrTake(100, 75)
+}
+
+func (g *Game) randomStartingCloudHeight() float64 {
+	var cloudRange = .1
+	return rand.Float64()*cloudRange*screenHeight + 20
 }
 
 func (g *Game) randomCloudHeight() float64 {
@@ -110,7 +131,6 @@ func (g *Game) randomCloudHeight() float64 {
 	} else {
 		cloudRange = .33
 	}
-
 	return rand.Float64()*cloudRange*screenHeight + 20
 }
 
@@ -141,14 +161,18 @@ func (g *Game) Update() error {
 				g.startOver()
 			}
 		} else {
+			if bot && inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+				g.startOver()
+				bot = false
+			}
 			prevLeft := g.player.LeftX()
 			prevRight := g.player.RightX()
 			g.handlePlayer()
 			g.handlePlatformCollision(prevLeft, prevRight)
 			g.handleScreenBounds()
 			g.handleCameraMovement()
-			g.handleGeocodes()
 		}
+		g.handleGeocodes()
 	} else { // Title Page
 		g.startButton.Update()
 	}
@@ -166,7 +190,7 @@ func (g *Game) handleBackgroundClouds() {
 		return
 	}
 	// Generate New
-	if g.distToLastCloud() < screenWidth/2 {
+	if len(g.clouds) < maxNumberClouds && g.distToLastCloud() < screenWidth/2 {
 		g.clouds = append(g.clouds, g.generateNewRandomCloud())
 	}
 	// Cleanup
@@ -473,17 +497,26 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawBackgroundClouds(screen)
 		g.drawTitle(screen)
 		g.startButton.Draw(screen)
-		//g.drawTitleText(screen, "Click anywhere to start", 200)
 	} else { // Game Started
 		g.drawPlatforms(screen)
 		g.player.Draw(screen, g.cameraX)
 		g.drawBackgroundClouds(screen)
 		if g.gameOver {
-			g.drawGameOverScreen(screen)
-			g.shareButton.Draw(screen)
+			if !bot {
+				g.shareButton.Draw(screen)
+			}
 		}
 		if bot {
 			g.drawBotScreen(screen)
+		}
+	}
+	g.DrawAllText(screen)
+}
+
+func (g *Game) DrawAllText(screen *ebiten.Image) {
+	if g.gameStarted {
+		if g.gameOver {
+			g.drawGameOverScreen(screen)
 		}
 		g.drawGeocodes(screen)
 		g.drawScore(screen)
@@ -554,8 +587,8 @@ func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
 }
 
 func (g *Game) drawBotScreen(screen *ebiten.Image) {
-	g.drawText(screen, "You can't be trusted to do it yourself.", 60)
-	g.drawText(screen, "Now you have to use Smarty.", 80)
+	g.drawText(screen, "Smarty will take it from here.", 60)
+	g.drawText(screen, "Press enter if you want to go back to the hard way.", 80)
 }
 
 // todo replace with drawTextCenteredOn

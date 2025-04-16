@@ -63,6 +63,7 @@ func (b *Button) Update() {
 	if b.getIsPressed() && !b.isPressed {
 		b.buttonFn()
 		b.isPressed = true
+		// todo make button react visually to being pressed
 	} else {
 		b.isPressed = false
 	}
