@@ -109,10 +109,10 @@ func (p *Player) DrawHitBox(screen *ebiten.Image, cameraX float64) {
 }
 
 func (p *Player) cycleImage() {
+	p.animation = p.animation.getNextState(p)
 	if !p.animation.shouldAnimate() {
 		return
 	}
-	p.animation = p.animation.getNextState(p)
 	p.animation.doState(p)
 }
 
