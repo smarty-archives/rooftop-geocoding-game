@@ -1,21 +1,22 @@
 package game
 
 import (
+	"image"
 	"image/color"
 	"log"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/smarty-archives/rooftop-geocoding-game/media"
 )
 
 type Platform struct {
 	Pos
-	width   float64
-	visited bool
-	image   *ebiten.Image
+	image              *ebiten.Image
+	width              float64
+	framesSinceVisited int
+	visited            bool
 }
 
 func NewPlatform(x, y, width float64) *Platform {
@@ -77,34 +78,65 @@ func pickWidth(counter int, numbers ...float64) float64 {
 			return numbers[i]
 		}
 	}
-	return numbers[len(numbers)-1] // Fallback, should never happen
+	return numbers[len(numbers)-1] // Fallback should never happen
 }
 
 func giveOrTake(num, delta float64) float64 {
 	return float64(rand.Intn(int(num+delta)-int(num-delta))) + num - delta
 }
 
-// deprecated
-func (p *Platform) Draw2(screen *ebiten.Image, cameraX float64) {
-	platformColor := colorGray
-	if p.visited {
-		platformColor = colorSmartyBlue
-	}
-	ebitenutil.DrawRect(screen, p.x-cameraX, p.y, p.width, screenHeight-p.y, platformColor)
-}
-
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
-	//if debugMode {
-	//	p.drawHitBox(screen, cameraX)
-	//}
-	platformCoor := &ebiten.DrawImageOptions{}
-	scaleX, scaleY := 1.0, 1.0
-	//scaleX := p.width / float64(p.image.Bounds().Dx())
-	//scaleY := scaleX
 	x := p.x - cameraX
-	platformCoor.GeoM.Scale(scaleX, scaleY)
-	platformCoor.GeoM.Translate(x, p.y)
-	screen.DrawImage(p.image, platformCoor)
+	scaleX, scaleY := 1.0, 1.0
+
+	imgWidth := p.image.Bounds().Dx()
+	imgHeight := p.image.Bounds().Dy()
+
+	const revealFrames = 10
+	const minAlpha = 0.9
+	const maxAlpha = 1.0
+	const buildingFeature = false
+
+	if p.framesSinceVisited < revealFrames && buildingFeature {
+		// unvisited image
+		unvisitedCoor := &ebiten.DrawImageOptions{}
+		unvisitedCoor.GeoM.Scale(scaleX, scaleY)
+		unvisitedCoor.GeoM.Translate(x, p.y)
+		unvisitedCoor.ColorScale.Scale(-1, -1, -1, 1) // replace this line with the image
+		screen.DrawImage(p.image, unvisitedCoor)
+		if !p.visited {
+			return
+		}
+		// progressively reveal image
+		progress := float64(p.framesSinceVisited) / float64(revealFrames)
+
+		for y := 0; y < imgHeight; y++ {
+			sliceProgress := float64(y) / float64(imgHeight)
+			alphaProgress := progress - sliceProgress
+
+			if alphaProgress <= 0 {
+				continue // not revealed yet
+			}
+			if alphaProgress > 1 {
+				alphaProgress = 1
+			}
+
+			alpha := minAlpha + alphaProgress*(maxAlpha-minAlpha)
+
+			slice := p.image.SubImage(image.Rect(0, y, imgWidth, y+1)).(*ebiten.Image)
+
+			revealCoor := &ebiten.DrawImageOptions{}
+			revealCoor.GeoM.Translate(x, p.y+float64(y))
+			revealCoor.ColorScale.Scale(1, 1, 1, float32(alpha))
+
+			screen.DrawImage(slice, revealCoor)
+		}
+	} else {
+		visitedCoor := &ebiten.DrawImageOptions{}
+		visitedCoor.GeoM.Scale(scaleX, scaleY)
+		visitedCoor.GeoM.Translate(x, p.y)
+		screen.DrawImage(p.image, visitedCoor)
+	}
 }
 
 func (p *Platform) drawHitBox(screen *ebiten.Image, cameraX float64) {

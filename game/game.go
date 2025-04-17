@@ -226,6 +226,11 @@ func (g *Game) handlePlatforms() {
 	if g.distToFirstPlatform() > screenWidth {
 		g.platforms = g.platforms[1:]
 	}
+	for i := range g.platforms {
+		if g.platforms[i].visited {
+			g.platforms[i].framesSinceVisited++
+		}
+	}
 }
 
 func (g *Game) distToLastPlatform() float64 {
