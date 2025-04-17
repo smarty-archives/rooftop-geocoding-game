@@ -48,22 +48,29 @@ func (b *Button) Draw(screen *ebiten.Image) {
 	b.drawMoreStrategy.DrawButton(screen, b)
 }
 
+func (b *Button) getJustPressed() bool {
+	return b.cursorOnButton() && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+}
+
 func (b *Button) getIsPressed() bool {
+
+	return b.cursorOnButton() && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
+func (b *Button) cursorOnButton() bool {
 	x32, y32 := ebiten.CursorPosition()
 	x := float64(x32)
 	y := float64(y32)
 	if debugMode {
 		fmt.Printf("x: %f, y: %f\n", x, y)
 	}
-	cursorOnButton := x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
-	return cursorOnButton && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	return x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
 }
 
 func (b *Button) Update() {
-	if b.getIsPressed() && !b.isPressed {
+	if b.getJustPressed() {
 		b.buttonFn()
 		b.isPressed = true
-		// todo make button react visually to being pressed
 	} else {
 		b.isPressed = false
 	}
@@ -126,6 +133,10 @@ func (is ImageStrategy) DrawButton(screen *ebiten.Image, button *Button) {
 	coor := &ebiten.DrawImageOptions{}
 	scaleX := button.width / float64(is.image.Bounds().Dx())
 	scaleY := button.width / float64(is.image.Bounds().Dy())
+	if button.getIsPressed() {
+		scaleX *= .9
+		scaleY *= .9
+	}
 	coor.GeoM.Scale(scaleX, scaleY)
 	coor.GeoM.Translate(button.x, button.y)
 	screen.DrawImage(is.image, coor)

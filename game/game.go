@@ -189,7 +189,7 @@ func (g *Game) handleBackgroundClouds() {
 		return
 	}
 	// Generate New
-	if len(g.clouds) < maxNumberClouds && g.distToLastCloud() < screenWidth/2 {
+	if g.distToLastCloud() < screenWidth/2 {
 		g.clouds = append(g.clouds, g.generateNewRandomCloud())
 	}
 	// Cleanup
