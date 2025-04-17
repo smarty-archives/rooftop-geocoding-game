@@ -26,7 +26,7 @@ func (state *BaseAnimationState) shouldAnimate() bool {
 		state.animationCounter--
 		return false
 	}
-	state.animationCounter = 6
+	state.animationCounter = 4
 	return true
 }
 
@@ -65,7 +65,7 @@ func (state *IdleState) shouldAnimate() bool {
 		state.animationCounter--
 		return false
 	}
-	state.animationCounter = 24
+	state.animationCounter = 21
 	return true
 }
 
@@ -131,7 +131,7 @@ func (state *JumpingState) shouldAnimate() bool {
 		state.animationCounter--
 		return false
 	}
-	state.animationCounter = 9
+	state.animationCounter = 6
 	return true
 }
 

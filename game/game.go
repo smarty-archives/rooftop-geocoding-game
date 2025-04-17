@@ -245,7 +245,6 @@ func (g *Game) distToFirstPlatform() float64 {
 func (g *Game) debug() {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		debugMode = true
-		fmt.Println(g.clouds[0].GetX(), g.clouds[0].getOffsetX(g.cameraX))
 	} else {
 		debugMode = false
 	}
@@ -280,6 +279,7 @@ func (g *Game) resetGameState() {
 }
 
 func (g *Game) handlePlayer() {
+	g.player.cycleImage() // this needs to be here so the player image is updated consistently regardless of frame rate
 	// todo make bot and player implement interface that applyGravity can use instead of checking for jumping keys
 	if bot {
 		g.botLogic()
@@ -514,6 +514,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawAllText(screen *ebiten.Image) {
+	//if debugMode {
+	//	g.drawTextCenteredOn(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()), 550, 40)
+	//	g.drawTextCenteredOn(screen, fmt.Sprintf("TPS: %f", ebiten.ActualTPS()), 550, 60)
+	//}
 	if g.gameStarted {
 		if g.gameOver && !bot {
 			g.drawGameOverScreen(screen)

@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -61,9 +60,6 @@ func (b *Button) cursorOnButton() bool {
 	x32, y32 := ebiten.CursorPosition()
 	x := float64(x32)
 	y := float64(y32)
-	if debugMode {
-		fmt.Printf("x: %f, y: %f\n", x, y)
-	}
 	return x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
 }
 

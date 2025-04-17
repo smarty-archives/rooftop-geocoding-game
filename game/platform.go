@@ -44,7 +44,7 @@ func GenerateNewRandomPlatform(prevPlatform *Platform, score int) *Platform {
 	minY := max(y-maxYDeltaTop, maxPlatformHeight)
 	maxY := float64(screenHeight - minimumPlatformHeight)
 	randY := float64(rand.Intn(int(maxY)-int(minY))) + minY
-	
+
 	randWidth := pickWidth(score, 175, 150, 125, 100, 75) // these numbers correspond to the widths of the building assets
 	return NewPlatform(randX, randY, randWidth)
 }
@@ -94,9 +94,9 @@ func (p *Platform) Draw2(screen *ebiten.Image, cameraX float64) {
 }
 
 func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
-	if debugMode {
-		p.drawHitBox(screen, cameraX)
-	}
+	//if debugMode {
+	//	p.drawHitBox(screen, cameraX)
+	//}
 	platformCoor := &ebiten.DrawImageOptions{}
 	scaleX, scaleY := 1.0, 1.0
 	//scaleX := p.width / float64(p.image.Bounds().Dx())
