@@ -4,6 +4,7 @@
 package game
 
 import (
+	"strings"
 	"syscall/js"
 )
 
@@ -39,4 +40,16 @@ func RegisterClickHandler(fn func(x, y int)) (any, any) {
 	val := canvas.Call("addEventListener", "touchend", releaseCallback)
 	val2 := canvas.Call("addEventListener", "touchstart", callback)
 	return val, val2 // return them and save them or GC could end them
+}
+
+func IsMobile() bool {
+	navigator := js.Global().Get("navigator")
+	if uaData := navigator.Get("userAgentData"); uaData.Truthy() {
+		if uaData.Get("mobile").Bool() {
+			return true
+		}
+	}
+
+	ua := navigator.Get("userAgent").String()
+	return strings.Contains(ua, "Mobi") || strings.Contains(ua, "Android") || strings.Contains(ua, "iPhone")
 }

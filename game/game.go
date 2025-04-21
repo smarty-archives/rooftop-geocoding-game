@@ -86,7 +86,7 @@ func NewGame() *Game {
 	g.shareButton = NewImageButton(startButtonCenterX, 300, 50, 50, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
 	}, media.Instance.GetCloudImage())
-	g.isMobile = true
+	g.isMobile = IsMobile()
 	if g.isMobile {
 		filler, filler2 = RegisterClickHandler(func(x, y int) {
 			if !g.gameStarted {
