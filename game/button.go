@@ -51,16 +51,19 @@ func (b *Button) getJustPressed() bool {
 	return b.cursorOnButton() && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 }
 
-func (b *Button) getIsPressed() bool {
+func (b *Button) Overlaps(x32, y32 int) bool {
+	x := float64(x32)
+	y := float64(y32)
+	return x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
+}
 
+func (b *Button) getIsPressed() bool {
 	return b.cursorOnButton() && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 }
 
 func (b *Button) cursorOnButton() bool {
 	x32, y32 := ebiten.CursorPosition()
-	x := float64(x32)
-	y := float64(y32)
-	return x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
+	return b.Overlaps(x32, y32)
 }
 
 func (b *Button) Update() {

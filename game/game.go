@@ -42,12 +42,15 @@ const (
 )
 
 var (
-	colorGray            = color.RGBA{R: 128, G: 128, B: 128, A: 255}
-	colorSmartyBlue      = color.RGBA{R: 0, G: 102, B: 255, A: 255}
-	colorText            = color.Black
-	bot                  = false
-	botFramesLeftJumping = 0
-	debugMode            = false
+	colorGray                = color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	colorSmartyBlue          = color.RGBA{R: 0, G: 102, B: 255, A: 255}
+	colorText                = color.Black
+	bot                      = false
+	botFramesLeftJumping     = 0
+	debugMode                = false
+	filler               any = nil
+	filler2              any = nil
+	isHeld                   = false
 )
 
 type Game struct {
@@ -63,6 +66,7 @@ type Game struct {
 	score            int
 	gameStarted      bool
 	gameOver         bool
+	isMobile         bool
 }
 
 var (
@@ -82,6 +86,23 @@ func NewGame() *Game {
 	g.shareButton = NewImageButton(startButtonCenterX, 300, 50, 50, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
 	}, media.Instance.GetCloudImage())
+	g.isMobile = true
+	if g.isMobile {
+		filler, filler2 = RegisterClickHandler(func(x, y int) {
+			if !g.gameStarted {
+				g.gameStarted = true
+			} else if g.gameOver {
+				if g.shareButton.Overlaps(x, y) {
+					g.shareButton.buttonFn()
+				} else {
+					g.startOver()
+				}
+				return
+			} else if g.playerCanJump() {
+				g.player.Jump()
+			}
+		})
+	}
 	return g
 }
 
@@ -286,7 +307,12 @@ func (g *Game) resetGameState() {
 func (g *Game) handlePlayer() {
 	g.player.cycleImage() // this needs to be here so the player image is updated consistently regardless of frame rate
 	// todo make bot and player implement interface that applyGravity can use instead of checking for jumping keys
-	if bot {
+	if g.isMobile {
+		if g.score > 0 { // wait until you land on the 1st building
+			g.player.AccelerateRight()
+		}
+		g.applyGravity()
+	} else if bot {
 		g.botLogic()
 		g.applyBotGravity()
 	} else {
@@ -410,7 +436,7 @@ func (g *Game) applyGravity() {
 	currentGravity := gravity
 	if g.player.velocityY > 0 {
 		currentGravity = heavyGravity
-	} else if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+	} else if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) || isHeld {
 		currentGravity = lightGravity
 	}
 	g.player.velocityY += currentGravity
@@ -591,8 +617,12 @@ func (g *Game) drawTitle(screen *ebiten.Image) {
 }
 
 func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
+	restartText := "Press Enter to Restart"
+	if g.isMobile {
+		restartText = "Tap anywhere to Restart"
+	}
 	g.drawText(screen, "That's not a rooftop geocode!", 60)
-	g.drawText(screen, "Press Enter to Restart", 90)
+	g.drawText(screen, restartText, 90)
 }
 
 func (g *Game) drawBotScreen(screen *ebiten.Image) {
