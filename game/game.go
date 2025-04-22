@@ -106,9 +106,8 @@ func NewGame() *Game {
 					g.startOver()
 				}
 				return
-			} else if g.playerCanJump() {
-				g.player.Jump()
 			}
+			g.Jump()
 		})
 	}
 	return g
@@ -352,6 +351,12 @@ func (g *Game) playerCanJump() bool {
 	return !g.playerInAir()
 }
 
+func (g *Game) Jump() {
+	if g.playerCanJump() {
+		g.player.Jump()
+	}
+}
+
 func (g *Game) playerInAir() bool {
 	for _, p := range g.platforms {
 		if g.playerOnPlatform(*p) {
@@ -439,9 +444,7 @@ func (g *Game) playerControls() {
 
 	// Jumping logic
 	if (ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW)) && !g.player.isJumping {
-		if g.playerCanJump() {
-			g.player.Jump()
-		}
+		g.Jump()
 	}
 }
 
