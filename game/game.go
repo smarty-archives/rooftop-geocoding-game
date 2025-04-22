@@ -36,7 +36,6 @@ const (
 	lightGravity           = 0.4
 	gravity                = 0.7
 	heavyGravity           = 0.8
-	maxNumberClouds        = 100
 
 	gameLink = "www.smarty.com/geocode-jumper"
 )
@@ -51,6 +50,7 @@ var (
 	filler               any = nil
 	filler2              any = nil
 	isHeld                   = false
+	AudioInitialized         = false
 )
 
 type Game struct {
@@ -62,6 +62,7 @@ type Game struct {
 	player           *Player
 	startButton      *Button
 	shareButton      *Button
+	muteButton       *Button
 	cameraX          float64
 	score            int
 	gameStarted      bool
@@ -86,6 +87,9 @@ func NewGame() *Game {
 	g.shareButton = NewImageButton(startButtonCenterX, 300, 50, 50, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
 	}, media.Instance.GetCloudImage())
+	g.muteButton = NewImageButton(screenWidth-30, 30, 20, 20, func() {
+		ToggleMute()
+	}, media.Instance.GetPlayingImage())
 	g.isMobile = IsMobile()
 	if g.isMobile {
 		filler, filler2 = RegisterClickHandler(func(x, y int) {
@@ -104,6 +108,15 @@ func NewGame() *Game {
 		})
 	}
 	return g
+}
+
+// todo use this?
+func GetMuteButtonImage() *ebiten.Image {
+	if isMuted {
+		return media.Instance.GetMutedImage()
+	} else {
+		return media.Instance.GetPlayingImage()
+	}
 }
 
 func (g *Game) initClouds() {
@@ -165,6 +178,7 @@ func (g *Game) initPlatforms() {
 
 func (g *Game) Update() error {
 	g.debug()
+	g.muteButton.Update()
 	g.handleBackgroundLayers()
 	g.handleBackgroundClouds()
 	if g.gameStarted {
@@ -541,21 +555,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.drawBotScreen(screen)
 		}
 	}
+	// todo don't use this hacky way
+	g.drawMuteButton(screen)
 	g.DrawAllText(screen)
-}
-
-func (g *Game) DrawAllText(screen *ebiten.Image) {
-	//if debugMode {
-	//	g.drawTextCenteredOn(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()), 550, 40)
-	//	g.drawTextCenteredOn(screen, fmt.Sprintf("TPS: %f", ebiten.ActualTPS()), 550, 60)
-	//}
-	if g.gameStarted {
-		if g.gameOver && !bot {
-			g.drawGameOverScreen(screen)
-		}
-		g.drawGeocodes(screen)
-		g.drawScore(screen)
-	}
 }
 
 func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
@@ -672,6 +674,35 @@ func (g *Game) drawGeocodes(screen *ebiten.Image) {
 
 func (g *Game) drawScore(screen *ebiten.Image) {
 	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
+}
+
+// todo don't use this hacky way
+func (g *Game) drawMuteButton(screen *ebiten.Image) {
+	image := GetMuteButtonImage()
+	coor := &ebiten.DrawImageOptions{}
+	scaleX := g.muteButton.width / float64(image.Bounds().Dx())
+	scaleY := g.muteButton.width / float64(image.Bounds().Dy())
+	if g.muteButton.getIsPressed() {
+		scaleX *= .9
+		scaleY *= .9
+	}
+	coor.GeoM.Scale(scaleX, scaleY)
+	coor.GeoM.Translate(g.muteButton.x, g.muteButton.y)
+	screen.DrawImage(image, coor)
+}
+
+func (g *Game) DrawAllText(screen *ebiten.Image) {
+	//if debugMode {
+	//	g.drawTextCenteredOn(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()), 550, 40)
+	//	g.drawTextCenteredOn(screen, fmt.Sprintf("TPS: %f", ebiten.ActualTPS()), 550, 60)
+	//}
+	if g.gameStarted {
+		if g.gameOver && !bot {
+			g.drawGameOverScreen(screen)
+		}
+		g.drawGeocodes(screen)
+		g.drawScore(screen)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////

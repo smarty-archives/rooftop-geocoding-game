@@ -5,7 +5,6 @@ package game
 
 import (
 	"strings"
-	"fmt"
 	"syscall/js"
 )
 
@@ -63,7 +62,6 @@ func RegisterClickHandler(fn func(x, y int)) (any, any) {
 			// Convert to game coordinates
 			gameX := (canvasX - offsetX) / scale
 			gameY := (canvasY - offsetY) / scale
-			fmt.Println(gameX, gameY)
 			fn(int(gameX), int(gameY))
 			isHeld = true
 		}

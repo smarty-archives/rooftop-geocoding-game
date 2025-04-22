@@ -30,6 +30,8 @@ type Manager struct {
 	buildingImages   map[string]*ebiten.Image
 	cloudImage       *ebiten.Image
 	titleImage       *ebiten.Image
+	mutedImage       *ebiten.Image
+	playingImage     *ebiten.Image
 }
 
 var (
@@ -49,6 +51,8 @@ func NewManager() *Manager {
 	result.initializeBuildingImages()
 	result.initializeCloudImage()
 	result.initializeTitleImage()
+	result.initializeMutedImage()
+	result.initializePlayingImage()
 	return result
 }
 
@@ -94,6 +98,14 @@ func (m *Manager) GetCloudImage() *ebiten.Image {
 
 func (m *Manager) GetTitleImage() *ebiten.Image {
 	return m.titleImage
+}
+
+func (m *Manager) GetMutedImage() *ebiten.Image {
+	return m.mutedImage
+}
+
+func (m *Manager) GetPlayingImage() *ebiten.Image {
+	return m.playingImage
 }
 
 func (m *Manager) initializeRunningImages() {
@@ -160,6 +172,24 @@ func (m *Manager) initializeTitleImage() {
 		log.Fatal(err)
 	}
 	m.titleImage = image
+}
+
+func (m *Manager) initializeMutedImage() {
+	fileName := "muted.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.mutedImage = image
+}
+
+func (m *Manager) initializePlayingImage() {
+	fileName := "playing.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.playingImage = image
 }
 
 func buildRunningImageFileName(i int) string {
