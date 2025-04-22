@@ -21,8 +21,9 @@ var bgmData []byte
 const sampleRate = 44100 // Standard audio sample rate
 
 var (
-	audioContext *audio.Context
-	player       *audio.Player
+	audioContext     *audio.Context
+	player           *audio.Player
+	audioInitialized bool
 )
 
 func main() {
@@ -34,12 +35,32 @@ func main() {
 }
 
 func wasmAudio() {
-	js.Global().Get("document").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		if player == nil || !player.IsPlaying() {
-			playAudio()
+	startAudio := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if !audioInitialized {
+			audioInitialized = true
+			audioContext = audio.NewContext(sampleRate)
+
+			// Decode MP3 from embedded bytes
+			stream, err := mp3.DecodeWithSampleRate(sampleRate, bytes.NewReader(bgmData))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			loop := audio.NewInfiniteLoop(stream, stream.Length())
+
+			player, err = audio.NewPlayer(audioContext, loop)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			player.Play()
 		}
 		return nil
-	}))
+	})
+
+	doc := js.Global().Get("document")
+	doc.Call("addEventListener", "click", startAudio)
+	doc.Call("addEventListener", "touchstart", startAudio)
 }
 
 func playAudio() {
