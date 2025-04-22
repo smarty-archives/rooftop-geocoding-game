@@ -5,6 +5,7 @@ package main
 
 import (
 	_ "embed"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/smarty-archives/rooftop-geocoding-game/game"
 )

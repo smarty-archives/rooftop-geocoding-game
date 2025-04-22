@@ -11,29 +11,31 @@ import (
 )
 
 const (
-	imagesFilePath          = "assets/images/"
-	runningImageFileName    = "guy"
-	idleImageFileName       = "idle"
-	backgroundImageFileName = "layer"
-	buildingImageFileName   = "building"
-	shareBtnImageFileName
-	imageFileExtension  = ".png"
-	NumPlayerImages     = 8
-	NumIdleImages       = 2
-	NumBackgroundLayers = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
-	NumBuildingImages   = 5
+	imagesFilePath               = "assets/images/"
+	runningImageFileName         = "guy"
+	idleImageFileName            = "idle"
+	backgroundImageFileName      = "layer"
+	buildingImageFileName        = "building"
+	visitedBuildingImageFileName = "visited-building"
+	shareBtnImageFileName        = "share-btn"
+	imageFileExtension           = ".png"
+	NumPlayerImages              = 8
+	NumIdleImages                = 2
+	NumBackgroundLayers          = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
+	NumBuildingImages            = 5
 )
 
 type Manager struct {
-	playerImages     map[string]*ebiten.Image
-	idleImages       map[string]*ebiten.Image
-	backgroundImages map[string]*ebiten.Image
-	buildingImages   map[string]*ebiten.Image
-	cloudImage       *ebiten.Image
-	titleImage       *ebiten.Image
-	mutedImage       *ebiten.Image
-	playingImage     *ebiten.Image
-	shareButtonImage *ebiten.Image
+	playerImages          map[string]*ebiten.Image
+	idleImages            map[string]*ebiten.Image
+	backgroundImages      map[string]*ebiten.Image
+	buildingImages        map[string]*ebiten.Image
+	visitedBuildingImages map[string]*ebiten.Image
+	cloudImage            *ebiten.Image
+	titleImage            *ebiten.Image
+	mutedImage            *ebiten.Image
+	playingImage          *ebiten.Image
+	shareButtonImage      *ebiten.Image
 }
 
 var (
@@ -51,6 +53,7 @@ func NewManager() *Manager {
 	result.initializeIdleImages()
 	result.initializeBackgroundImages()
 	result.initializeBuildingImages()
+	result.initializeVisitedBuildingImages()
 	result.initializeCloudImage()
 	result.initializeTitleImage()
 	result.initializeMutedImage()
@@ -89,6 +92,15 @@ func (m *Manager) LoadBackgroundImage(i int) (*ebiten.Image, error) {
 func (m *Manager) LoadBuildingImage(i int) (*ebiten.Image, error) {
 	fileName := buildBuildingImageFileName(i)
 	image, ok := m.buildingImages[fileName]
+	if !ok {
+		return nil, errImageNotFound
+	}
+	return image, nil
+}
+
+func (m *Manager) LoadVisitedBuildingImage(i int) (*ebiten.Image, error) {
+	fileName := buildVisitedBuildingImageFileName(i)
+	image, ok := m.visitedBuildingImages[fileName]
 	if !ok {
 		return nil, errImageNotFound
 	}
@@ -163,6 +175,18 @@ func (m *Manager) initializeBuildingImages() {
 	}
 }
 
+func (m *Manager) initializeVisitedBuildingImages() {
+	m.visitedBuildingImages = make(map[string]*ebiten.Image)
+	for i := range NumBuildingImages {
+		fileName := buildVisitedBuildingImageFileName(i)
+		image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.visitedBuildingImages[fileName] = image
+	}
+}
+
 func (m *Manager) initializeCloudImage() {
 	fileName := "cloud.png"
 	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
@@ -222,4 +246,8 @@ func buildBackgroundImageFileName(i int) string {
 
 func buildBuildingImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", buildingImageFileName, i, imageFileExtension)
+}
+
+func buildVisitedBuildingImageFileName(i int) string {
+	return fmt.Sprintf("%s%d%s", visitedBuildingImageFileName, i, imageFileExtension)
 }

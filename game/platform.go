@@ -14,6 +14,7 @@ import (
 type Platform struct {
 	Pos
 	image              *ebiten.Image
+	visitedImage       *ebiten.Image
 	width              float64
 	framesSinceVisited int
 	visited            bool
@@ -95,14 +96,14 @@ func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
 	const revealFrames = 10
 	const minAlpha = 0.9
 	const maxAlpha = 1.0
-	const buildingFeature = false
+	const buildingFeature = true
 
 	if p.framesSinceVisited < revealFrames && buildingFeature {
 		// unvisited image
 		unvisitedCoor := &ebiten.DrawImageOptions{}
 		unvisitedCoor.GeoM.Scale(scaleX, scaleY)
 		unvisitedCoor.GeoM.Translate(x, p.y)
-		unvisitedCoor.ColorScale.Scale(-1, -1, -1, 1) // replace this line with the image
+
 		screen.DrawImage(p.image, unvisitedCoor)
 		if !p.visited {
 			return
@@ -122,8 +123,7 @@ func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
 			}
 
 			alpha := minAlpha + alphaProgress*(maxAlpha-minAlpha)
-
-			slice := p.image.SubImage(image.Rect(0, y, imgWidth, y+1)).(*ebiten.Image)
+			slice := p.visitedImage.SubImage(image.Rect(0, y, imgWidth, y+1)).(*ebiten.Image)
 
 			revealCoor := &ebiten.DrawImageOptions{}
 			revealCoor.GeoM.Translate(x, p.y+float64(y))
@@ -135,10 +135,19 @@ func (p *Platform) Draw(screen *ebiten.Image, cameraX float64) {
 		visitedCoor := &ebiten.DrawImageOptions{}
 		visitedCoor.GeoM.Scale(scaleX, scaleY)
 		visitedCoor.GeoM.Translate(x, p.y)
-		screen.DrawImage(p.image, visitedCoor)
+		screen.DrawImage(p.visitedImage, visitedCoor)
 	}
 }
 
 func (p *Platform) drawHitBox(screen *ebiten.Image, cameraX float64) {
 	vector.DrawFilledRect(screen, float32(p.x-cameraX), float32(p.y), float32(p.width), float32(maxPlatformHeight), color.RGBA{R: 255}, false)
+}
+
+func (p *Platform) Visit() {
+	p.visited = true
+	newImage, err := media.Instance.LoadVisitedBuildingImage(getPlatformIndex(p.width))
+	if err != nil {
+		log.Fatal(err)
+	}
+	p.visitedImage = newImage
 }

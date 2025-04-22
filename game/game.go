@@ -474,7 +474,7 @@ func (g *Game) handlePlatformCollision(prevLeft, prevRight float64) {
 			g.player.isJumping = false
 
 			if !p.visited {
-				p.visited = true
+				p.Visit()
 				g.score++
 				g.addGeocode()
 			}
