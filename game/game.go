@@ -93,6 +93,10 @@ func NewGame() *Game {
 	g.isMobile = IsMobile()
 	if g.isMobile {
 		filler, filler2 = RegisterClickHandler(func(x, y int) {
+			if g.muteButton.Overlaps(x, y) {
+				g.muteButton.buttonFn()
+				return
+			}
 			if !g.gameStarted {
 				g.gameStarted = true
 			} else if g.gameOver {
