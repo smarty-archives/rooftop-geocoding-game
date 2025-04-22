@@ -16,11 +16,12 @@ const (
 	idleImageFileName       = "idle"
 	backgroundImageFileName = "layer"
 	buildingImageFileName   = "building"
-	imageFileExtension      = ".png"
-	NumPlayerImages         = 8
-	NumIdleImages           = 2
-	NumBackgroundLayers     = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
-	NumBuildingImages       = 5
+	shareBtnImageFileName
+	imageFileExtension  = ".png"
+	NumPlayerImages     = 8
+	NumIdleImages       = 2
+	NumBackgroundLayers = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
+	NumBuildingImages   = 5
 )
 
 type Manager struct {
@@ -32,6 +33,7 @@ type Manager struct {
 	titleImage       *ebiten.Image
 	mutedImage       *ebiten.Image
 	playingImage     *ebiten.Image
+	shareButtonImage *ebiten.Image
 }
 
 var (
@@ -53,6 +55,7 @@ func NewManager() *Manager {
 	result.initializeTitleImage()
 	result.initializeMutedImage()
 	result.initializePlayingImage()
+	result.initializeShareButtonImage()
 	return result
 }
 
@@ -106,6 +109,10 @@ func (m *Manager) GetMutedImage() *ebiten.Image {
 
 func (m *Manager) GetPlayingImage() *ebiten.Image {
 	return m.playingImage
+}
+
+func (m *Manager) GetShareButtonImage() *ebiten.Image {
+	return m.shareButtonImage
 }
 
 func (m *Manager) initializeRunningImages() {
@@ -190,6 +197,15 @@ func (m *Manager) initializePlayingImage() {
 		log.Fatal(err)
 	}
 	m.playingImage = image
+}
+
+func (m *Manager) initializeShareButtonImage() {
+	fileName := "share-btn.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.shareButtonImage = image
 }
 
 func buildRunningImageFileName(i int) string {

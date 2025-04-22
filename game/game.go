@@ -84,9 +84,9 @@ func NewGame() *Game {
 	g.startButton = NewTextButton(startButtonCenterX, startButtonCenterY, 100, 50, func() {
 		g.gameStarted = true
 	}, "Play")
-	g.shareButton = NewImageButton(startButtonCenterX, 300, 50, 50, func() {
+	g.shareButton = NewImageButton(startButtonCenterX, 300, 100, 100, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
-	}, media.Instance.GetCloudImage())
+	}, media.Instance.GetShareButtonImage())
 	g.muteButton = NewImageButton(screenWidth-30, 30, 20, 20, func() {
 		ToggleMute()
 	}, media.Instance.GetPlayingImage())
