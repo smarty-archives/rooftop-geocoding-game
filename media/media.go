@@ -17,11 +17,10 @@ const (
 	backgroundImageFileName      = "layer"
 	buildingImageFileName        = "building"
 	visitedBuildingImageFileName = "visited-building"
-	shareBtnImageFileName        = "share-btn"
 	imageFileExtension           = ".png"
 	NumPlayerImages              = 8
 	NumIdleImages                = 2
-	NumBackgroundLayers          = 1 // Warning: if this number is more than the number of speeds in NewLayers, then it will panic
+	NumBackgroundLayers          = 1 // Warning: if this number is greater than the number of speeds in NewLayers, then it will panic
 	NumBuildingImages            = 5
 )
 
@@ -36,6 +35,8 @@ type Manager struct {
 	mutedImage            *ebiten.Image
 	playingImage          *ebiten.Image
 	shareButtonImage      *ebiten.Image
+	playButtonImage       *ebiten.Image
+	restartButtonImage    *ebiten.Image
 }
 
 var (
@@ -59,6 +60,8 @@ func NewManager() *Manager {
 	result.initializeMutedImage()
 	result.initializePlayingImage()
 	result.initializeShareButtonImage()
+	result.initializePlayButtonImage()
+	result.initializeRestartButtonImage()
 	return result
 }
 
@@ -125,6 +128,12 @@ func (m *Manager) GetPlayingImage() *ebiten.Image {
 
 func (m *Manager) GetShareButtonImage() *ebiten.Image {
 	return m.shareButtonImage
+}
+func (m *Manager) GetPlayButtonImage() *ebiten.Image {
+	return m.playButtonImage
+}
+func (m *Manager) GetRestartButtonImage() *ebiten.Image {
+	return m.restartButtonImage
 }
 
 func (m *Manager) initializeRunningImages() {
@@ -224,12 +233,30 @@ func (m *Manager) initializePlayingImage() {
 }
 
 func (m *Manager) initializeShareButtonImage() {
-	fileName := "share-btn.png"
+	fileName := "copy-link-prompt.png"
 	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 	m.shareButtonImage = image
+}
+
+func (m *Manager) initializePlayButtonImage() {
+	fileName := "play-button.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.playButtonImage = image
+}
+
+func (m *Manager) initializeRestartButtonImage() {
+	fileName := "text-enter-restart.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.restartButtonImage = image
 }
 
 func buildRunningImageFileName(i int) string {

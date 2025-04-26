@@ -129,14 +129,14 @@ func NewImageStrategy(image *ebiten.Image) ImageStrategy {
 }
 
 func (is ImageStrategy) DrawButton(screen *ebiten.Image, button *Button) {
-	coor := &ebiten.DrawImageOptions{}
+	imageOptions := &ebiten.DrawImageOptions{}
 	scaleX := button.width / float64(is.image.Bounds().Dx())
-	scaleY := button.width / float64(is.image.Bounds().Dy())
+	scaleY := scaleX
 	if button.getIsPressed() {
 		scaleX *= .9
 		scaleY *= .9
 	}
-	coor.GeoM.Scale(scaleX, scaleY)
-	coor.GeoM.Translate(button.x, button.y)
-	screen.DrawImage(is.image, coor)
+	imageOptions.GeoM.Scale(scaleX, scaleY)
+	imageOptions.GeoM.Translate(button.x, button.y)
+	screen.DrawImage(is.image, imageOptions)
 }

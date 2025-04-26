@@ -3,7 +3,7 @@
 
 package game
 
-func RegisterClickHandler(fn func(x, y int)) (any, any) {
+func RegisterClickHandler(_ func(x, y int)) (any, any) {
 	return nil, nil
 }
 

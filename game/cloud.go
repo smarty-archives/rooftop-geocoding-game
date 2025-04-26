@@ -24,17 +24,17 @@ func NewCloud(x, y float64, speed float64) *Cloud {
 }
 
 func (c *Cloud) Draw(screen *ebiten.Image, cameraX float64) {
-	cloudCoor := &ebiten.DrawImageOptions{}
+	cloudOptions := &ebiten.DrawImageOptions{}
 	scaleX, scaleY := 1.0, 1.0
 	x := c.getOffsetX(cameraX)
 
-	cloudCoor.GeoM.Scale(scaleX, scaleY)
-	cloudCoor.GeoM.Translate(x, c.GetY())
+	cloudOptions.GeoM.Scale(scaleX, scaleY)
+	cloudOptions.GeoM.Translate(x, c.GetY())
 
 	// Set transparency (alpha value between 0.0 and 1.0)
-	cloudCoor.ColorScale.Scale(1, 1, 1, c.Transparency)
+	cloudOptions.ColorScale.Scale(1, 1, 1, c.Transparency)
 
-	screen.DrawImage(c.Image, cloudCoor)
+	screen.DrawImage(c.Image, cloudOptions)
 }
 
 func (c *Cloud) getOffsetX(cameraX float64) float64 {

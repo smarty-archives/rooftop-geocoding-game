@@ -28,7 +28,7 @@ func InitializeAudio(bgmData []byte) {
 	}
 
 	loop := audio.NewInfiniteLoop(stream, stream.Length())
-	player, err = audio.NewPlayer(audioContext, loop)
+	player, err = audioContext.NewPlayer(loop)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -41,8 +41,6 @@ const (
 )
 
 var (
-	colorGray                = color.RGBA{R: 128, G: 128, B: 128, A: 255}
-	colorSmartyBlue          = color.RGBA{R: 0, G: 102, B: 255, A: 255}
 	colorText                = color.Black
 	bot                      = false
 	botFramesLeftJumping     = 0
@@ -70,6 +68,8 @@ type Game struct {
 	isMobile         bool
 }
 
+func (g *Game) Layout(_, _ int) (int, int) { return screenWidth, screenHeight }
+
 var (
 	defaultFont = basicfont.Face7x13 // Use the default basic font from Ebiten
 )
@@ -81,15 +81,7 @@ func NewGame() *Game {
 	g.player = NewPlayer()
 	g.font = defaultFont
 	g.backgroundLayers = NewLayers()
-	g.startButton = NewTextButton(startButtonCenterX, startButtonCenterY, 100, 50, func() {
-		g.gameStarted = true
-	}, "Play")
-	g.shareButton = NewImageButton(startButtonCenterX, 300, 100, 100, func() {
-		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
-	}, media.Instance.GetShareButtonImage())
-	g.muteButton = NewImageButton(screenWidth-30, 30, 20, 20, func() {
-		ToggleMute()
-	}, media.Instance.GetPlayingImage())
+	g.initButtons()
 	g.isMobile = IsMobile()
 	if g.isMobile {
 		filler, filler2 = RegisterClickHandler(func(x, y int) {
@@ -113,20 +105,11 @@ func NewGame() *Game {
 	return g
 }
 
-// todo use this?
-func GetMuteButtonImage() *ebiten.Image {
-	if isMuted {
-		return media.Instance.GetMutedImage()
-	} else {
-		return media.Instance.GetPlayingImage()
-	}
-}
-
 func (g *Game) initClouds() {
 	g.clouds = []*Cloud{
 		NewCloud(20, g.randomStartingCloudHeight(), .5),
 	}
-	for _ = range 20 {
+	for range 20 {
 		g.clouds = append(g.clouds, g.generateNewRandomStartingCloud())
 	}
 }
@@ -177,6 +160,20 @@ func (g *Game) initPlatforms() {
 	}
 }
 
+func (g *Game) initButtons() {
+	g.startButton = NewImageButton(startButtonCenterX, startButtonCenterY, 187, 60, func() {
+		g.gameStarted = true
+	}, media.Instance.GetPlayButtonImage())
+
+	g.shareButton = NewImageButton(startButtonCenterX, 400, 360, 100, func() {
+		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
+	}, media.Instance.GetShareButtonImage())
+
+	g.muteButton = NewImageButton(screenWidth-30, 30, 20, 20, func() {
+		ToggleMute()
+	}, media.Instance.GetPlayingImage())
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 func (g *Game) Update() error {
@@ -188,7 +185,7 @@ func (g *Game) Update() error {
 		g.handlePlatforms()
 		g.checkGameOver()
 
-		// If game over, reset the game when enter key is pressed
+		// If game over, reset the game when the enter key is pressed
 		if g.gameOver {
 			g.shareButton.Update()
 			if ebiten.IsKeyPressed(ebiten.KeyEnter) {
@@ -347,6 +344,14 @@ func (g *Game) botLogic() {
 	}
 }
 
+func (g *Game) botShouldAccelerateRight() bool {
+	platform := g.nextUnvisitedPlatform()
+	if g.player.x >= platform.x+(platform.width/2)-playerSize {
+		return false
+	}
+	return true
+}
+
 func (g *Game) playerCanJump() bool {
 	return !g.playerInAir()
 }
@@ -391,7 +396,7 @@ func (g *Game) nextUnvisitedPlatform() *Platform {
 	return nil
 }
 
-// heightAfterXFramesOfJumping assumes that player is moving at top speed
+// heightAfterXFramesOfJumping assumes that the player is moving at top speed
 func (g *Game) heightAfterXFramesOfJumping(jumpFrames, totalFrames int) (y float64, velocityY float64) {
 	finalY := g.player.y
 	velocity := g.player.GetJumpForce()
@@ -466,7 +471,7 @@ func (g *Game) applyGravity() {
 
 func (g *Game) handlePlatformCollision(prevLeft, prevRight float64) {
 	for _, p := range g.platforms {
-		// **Vertical collision (Landing on platform)**
+		// **Vertical collision (Landing on the platform)**
 		if g.playerOnPlatform(*p) {
 			// Land on the platform
 			g.player.y = p.y - playerSize
@@ -482,13 +487,13 @@ func (g *Game) handlePlatformCollision(prevLeft, prevRight float64) {
 		platformLeft := p.x
 		platformRight := p.x + p.width
 		// **Side collision (Hitting the sides of the platform)**
-		if g.player.y+playerSize > p.y { // Player is below platform surface
+		if g.player.y+playerSize > p.y { // Player is below the platform surface
 			if prevRight <= platformLeft && g.player.RightX() > platformLeft { // Hitting left side
-				// Move player to edge of platform
+				// Move player to edge of the platform
 				g.player.x = platformLeft - g.player.width/2 - playerSize/2
 				g.player.velocityX = 0
-			} else if prevLeft >= platformRight && g.player.LeftX() < platformRight { // Hitting right side
-				// Move player to edge of platform
+			} else if prevLeft >= platformRight && g.player.LeftX() < platformRight { // Hitting the right side
+				// Move player to the edge of the platform
 				g.player.x = platformRight + g.player.width/2 - playerSize/2
 				g.player.velocityX = 0
 			}
@@ -501,7 +506,7 @@ func (g *Game) playerOnPlatform(p Platform) bool {
 	platformRight := p.x + p.width
 	platformLeft := p.x
 
-	// **Vertical collision (Landing on platform)**
+	// **Vertical collision (Landing on the platform)**
 	return g.player.RightX() > platformLeft && g.player.LeftX() < platformRight && // Player overlaps horizontally
 		g.player.y+playerSize >= p.y && g.player.y+playerSize-g.player.velocityY <= p.y // Player is falling onto the platform
 }
@@ -556,14 +561,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if g.gameOver {
 			if !bot {
 				g.shareButton.Draw(screen)
+				g.drawGameOverScreen(screen)
 			}
 		}
 		if bot {
 			g.drawBotScreen(screen)
 		}
 	}
-	// todo don't use this hacky way
-	g.drawMuteButton(screen)
+	g.drawMuteButton(screen) // todo don't use this hacky way
 	g.DrawAllText(screen)
 }
 
@@ -574,7 +579,7 @@ func (g *Game) drawBackgroundLayers(screen *ebiten.Image) {
 
 		// Scale the image to match the screen height
 		scaleY := float64(screenHeight) / float64(imgHeight)
-		scaleX := scaleY // Maintain aspect ratio horizontally
+		scaleX := scaleY // Maintain the aspect ratio horizontally
 
 		// Calculate the total width of a single scaled image
 		scaledWidth := float64(imgWidth) * scaleX
@@ -615,56 +620,40 @@ func (g *Game) drawBackgroundClouds(screen *ebiten.Image) {
 }
 
 func (g *Game) drawTitle(screen *ebiten.Image) {
-	titleCoor := &ebiten.DrawImageOptions{}
+	drawImage(screen, media.Instance.GetTitleImage(), screenWidth/2, screenHeight/2-50)
+}
+
+func drawImage(screen *ebiten.Image, image *ebiten.Image, centerX, centerY float64) {
+	titleOptions := &ebiten.DrawImageOptions{}
 	scaleX, scaleY := 1.0, 1.0
-	image := media.Instance.GetTitleImage()
-	x := float64(screenWidth/2 - image.Bounds().Dx()/2)
-	y := float64(screenHeight/2-image.Bounds().Dy()/2) - 50
-	titleCoor.GeoM.Scale(scaleX, scaleY)
-	titleCoor.GeoM.Translate(x, y)
-	screen.DrawImage(image, titleCoor)
+	x := centerX - float64(image.Bounds().Dx()/2)
+	y := centerY - float64(image.Bounds().Dy()/2)
+	titleOptions.GeoM.Scale(scaleX, scaleY)
+	titleOptions.GeoM.Translate(x, y)
+	screen.DrawImage(image, titleOptions)
 }
 
 func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
-	restartText := "Press Enter to Restart"
+	var restartImage *ebiten.Image
 	if g.isMobile {
-		restartText = "Tap anywhere to Restart"
+		restartImage = media.Instance.GetRestartButtonImage()
+	} else {
+		restartImage = media.Instance.GetRestartButtonImage()
 	}
-	g.drawText(screen, "That's not a rooftop geocode!", 60)
-	g.drawText(screen, restartText, 90)
+	drawImage(screen, restartImage, screenWidth/2, screenHeight/2)
 }
 
 func (g *Game) drawBotScreen(screen *ebiten.Image) {
-	g.drawText(screen, "Smarty will take it from here.", 60)
-	g.drawText(screen, "Press enter if you want to go back to the hard way.", 80)
+	g.drawTextCenteredOn(screen, "Smarty will take it from here.", screenWidth/2, 60)
+	g.drawTextCenteredOn(screen, "Press enter if you want to go back to the hard way.", screenWidth/2, 80)
 }
 
-// todo replace with drawTextCenteredOn
-func (g *Game) drawText(screen *ebiten.Image, content string, y int) {
+func (g *Game) drawTextCenteredOn(screen *ebiten.Image, content string, x, y int) {
 	textWidth := font.MeasureString(g.font, content).Ceil()
-	x := (screenWidth - textWidth) / 2
-	text.Draw(screen, content, g.font, x, y, colorText)
-}
-
-func (g *Game) drawTitleText(screen *ebiten.Image, content string, y int) {
-	// Measure text size
-	bounds := text.BoundString(g.font, content)
-	width := bounds.Dx()
-	height := bounds.Dy()
-	// Create a temporary image to draw the original text
-	textImage := ebiten.NewImage(width, height)
-	text.Draw(textImage, content, g.font, 0, g.font.Metrics().Ascent.Ceil(), colorText)
-
-	// Scale the image 2x
-	scale := 2.0
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(scale, scale)
-
-	// Center it horizontally on the screen
-	x := float64((screenWidth - int(float64(width)*scale)) / 2)
-	op.GeoM.Translate(x, float64(y))
-
-	screen.DrawImage(textImage, op)
+	textHeight := g.font.Metrics().Ascent.Ceil()
+	drawX := x - textWidth/2
+	drawY := y - textHeight/2
+	text.Draw(screen, content, g.font, drawX, drawY, colorText)
 }
 
 func (g *Game) drawPlatforms(screen *ebiten.Image) {
@@ -686,48 +675,27 @@ func (g *Game) drawScore(screen *ebiten.Image) {
 // todo don't use this hacky way
 func (g *Game) drawMuteButton(screen *ebiten.Image) {
 	image := GetMuteButtonImage()
-	coor := &ebiten.DrawImageOptions{}
+	muteOptions := &ebiten.DrawImageOptions{}
 	scaleX := g.muteButton.width / float64(image.Bounds().Dx())
 	scaleY := g.muteButton.width / float64(image.Bounds().Dy())
-	if g.muteButton.getIsPressed() {
-		scaleX *= .9
-		scaleY *= .9
+	muteOptions.GeoM.Scale(scaleX, scaleY)
+	muteOptions.GeoM.Translate(g.muteButton.x, g.muteButton.y)
+	screen.DrawImage(image, muteOptions)
+}
+
+func GetMuteButtonImage() *ebiten.Image {
+	if isMuted {
+		return media.Instance.GetMutedImage()
+	} else {
+		return media.Instance.GetPlayingImage()
 	}
-	coor.GeoM.Scale(scaleX, scaleY)
-	coor.GeoM.Translate(g.muteButton.x, g.muteButton.y)
-	screen.DrawImage(image, coor)
 }
 
 func (g *Game) DrawAllText(screen *ebiten.Image) {
-	//if debugMode {
-	//	g.drawTextCenteredOn(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()), 550, 40)
-	//	g.drawTextCenteredOn(screen, fmt.Sprintf("TPS: %f", ebiten.ActualTPS()), 550, 60)
-	//}
 	if g.gameStarted {
-		if g.gameOver && !bot {
-			g.drawGameOverScreen(screen)
-		}
 		g.drawGeocodes(screen)
 		g.drawScore(screen)
 	}
 }
 
 ////////////////////////////////////////////////////////////////////////
-
-func (g *Game) Layout(_, _ int) (int, int) { return screenWidth, screenHeight }
-
-func (g *Game) drawTextCenteredOn(screen *ebiten.Image, content string, x, y int) {
-	textWidth := font.MeasureString(g.font, content).Ceil()
-	textHeight := g.font.Metrics().Ascent.Ceil()
-	drawX := x - textWidth/2
-	drawY := y - textHeight/2
-	text.Draw(screen, content, g.font, drawX, drawY, colorText)
-}
-
-func (g *Game) botShouldAccelerateRight() bool {
-	platform := g.nextUnvisitedPlatform()
-	if g.player.x >= platform.x+(platform.width/2)-playerSize {
-		return false
-	}
-	return true
-}
