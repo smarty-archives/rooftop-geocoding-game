@@ -25,18 +25,20 @@ const (
 )
 
 type Manager struct {
-	playerImages          map[string]*ebiten.Image
-	idleImages            map[string]*ebiten.Image
-	backgroundImages      map[string]*ebiten.Image
-	buildingImages        map[string]*ebiten.Image
-	visitedBuildingImages map[string]*ebiten.Image
-	cloudImage            *ebiten.Image
-	titleImage            *ebiten.Image
-	mutedImage            *ebiten.Image
-	playingImage          *ebiten.Image
-	shareButtonImage      *ebiten.Image
-	playButtonImage       *ebiten.Image
-	restartButtonImage    *ebiten.Image
+	playerImages                map[string]*ebiten.Image
+	idleImages                  map[string]*ebiten.Image
+	backgroundImages            map[string]*ebiten.Image
+	buildingImages              map[string]*ebiten.Image
+	visitedBuildingImages       map[string]*ebiten.Image
+	cloudImage                  *ebiten.Image
+	titleImage                  *ebiten.Image
+	mutedImage                  *ebiten.Image
+	playingImage                *ebiten.Image
+	playButtonImage             *ebiten.Image
+	copyScorePromptButtonImage  *ebiten.Image
+	copyScoreSuccessButtonImage *ebiten.Image
+	restartButtonImage          *ebiten.Image
+	mobileRestartButtonImage    *ebiten.Image
 }
 
 var (
@@ -59,9 +61,11 @@ func NewManager() *Manager {
 	result.initializeTitleImage()
 	result.initializeMutedImage()
 	result.initializePlayingImage()
-	result.initializeShareButtonImage()
 	result.initializePlayButtonImage()
+	result.initializeCopyScorePromptButtonImage()
+	result.initializeCopyScoreSuccessButtonImage()
 	result.initializeRestartButtonImage()
+	result.initializeMobileRestartButtonImage()
 	return result
 }
 
@@ -126,15 +130,27 @@ func (m *Manager) GetPlayingImage() *ebiten.Image {
 	return m.playingImage
 }
 
-func (m *Manager) GetShareButtonImage() *ebiten.Image {
-	return m.shareButtonImage
-}
 func (m *Manager) GetPlayButtonImage() *ebiten.Image {
 	return m.playButtonImage
 }
+
+func (m *Manager) GetCopyScorePromptButtonImage() *ebiten.Image {
+	return m.copyScorePromptButtonImage
+}
+
+func (m *Manager) GetCopyScoreSuccessButtonImage() *ebiten.Image {
+	return m.copyScoreSuccessButtonImage
+}
+
 func (m *Manager) GetRestartButtonImage() *ebiten.Image {
 	return m.restartButtonImage
 }
+
+func (m *Manager) GetMobileRestartButtonImage() *ebiten.Image {
+	return m.mobileRestartButtonImage
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 func (m *Manager) initializeRunningImages() {
 	m.playerImages = make(map[string]*ebiten.Image)
@@ -232,15 +248,6 @@ func (m *Manager) initializePlayingImage() {
 	m.playingImage = image
 }
 
-func (m *Manager) initializeShareButtonImage() {
-	fileName := "copy-link-prompt.png"
-	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
-	if err != nil {
-		log.Fatal(err)
-	}
-	m.shareButtonImage = image
-}
-
 func (m *Manager) initializePlayButtonImage() {
 	fileName := "play-button.png"
 	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
@@ -248,6 +255,24 @@ func (m *Manager) initializePlayButtonImage() {
 		log.Fatal(err)
 	}
 	m.playButtonImage = image
+}
+
+func (m *Manager) initializeCopyScorePromptButtonImage() {
+	fileName := "copy-score-prompt.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.copyScorePromptButtonImage = image
+}
+
+func (m *Manager) initializeCopyScoreSuccessButtonImage() {
+	fileName := "copy-score-success.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.copyScoreSuccessButtonImage = image
 }
 
 func (m *Manager) initializeRestartButtonImage() {
@@ -258,6 +283,17 @@ func (m *Manager) initializeRestartButtonImage() {
 	}
 	m.restartButtonImage = image
 }
+
+func (m *Manager) initializeMobileRestartButtonImage() {
+	fileName := "text-tap-restart.png"
+	image, _, err := ebitenutil.NewImageFromFile(filepath.Join(imagesFilePath, fileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.mobileRestartButtonImage = image
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 func buildRunningImageFileName(i int) string {
 	return fmt.Sprintf("%s%d%s", runningImageFileName, i, imageFileExtension)

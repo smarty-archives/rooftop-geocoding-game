@@ -37,9 +37,9 @@ func NewTextButton(centerX, centerY, width, height float64, btnFunc func(), text
 	return b
 }
 
-func NewImageButton(centerX, centerY, width, height float64, btnFunc func(), image *ebiten.Image) *Button {
+func NewImageButton(centerX, centerY, width, height, scale float64, btnFunc func(), imageFunc func() *ebiten.Image) *Button {
 	b := NewButton(centerX, centerY, width, height, btnFunc)
-	b.drawMoreStrategy = NewImageStrategy(image)
+	b.drawMoreStrategy = NewImageStrategy(imageFunc, scale)
 	return b
 }
 
@@ -119,24 +119,21 @@ func (ts TextStrategy) DrawButton(screen *ebiten.Image, button *Button) {
 }
 
 type ImageStrategy struct {
-	image *ebiten.Image
+	imageFunc func() *ebiten.Image
+	scale     float64
 }
 
-func NewImageStrategy(image *ebiten.Image) ImageStrategy {
+func NewImageStrategy(imageFunc func() *ebiten.Image, scale float64) ImageStrategy {
 	return ImageStrategy{
-		image: image,
+		imageFunc: imageFunc,
+		scale:     scale,
 	}
 }
 
 func (is ImageStrategy) DrawButton(screen *ebiten.Image, button *Button) {
+	image := is.imageFunc()
 	imageOptions := &ebiten.DrawImageOptions{}
-	scaleX := button.width / float64(is.image.Bounds().Dx())
-	scaleY := scaleX
-	if button.getIsPressed() {
-		scaleX *= .9
-		scaleY *= .9
-	}
-	imageOptions.GeoM.Scale(scaleX, scaleY)
+	imageOptions.GeoM.Scale(is.scale, is.scale)
 	imageOptions.GeoM.Translate(button.x, button.y)
-	screen.DrawImage(is.image, imageOptions)
+	screen.DrawImage(image, imageOptions)
 }

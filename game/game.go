@@ -41,14 +41,15 @@ const (
 )
 
 var (
-	colorText                = color.Black
-	bot                      = false
-	botFramesLeftJumping     = 0
-	debugMode                = false
-	filler               any = nil
-	filler2              any = nil
-	isHeld                   = false
-	AudioInitialized         = false
+	colorText                  = color.Black
+	bot                        = false
+	botFramesLeftJumping       = 0
+	debugMode                  = false
+	filler                 any = nil
+	filler2                any = nil
+	AudioInitialized           = false
+	isHeld                     = false
+	copiedSuccessCountdown     = 0
 )
 
 type Game struct {
@@ -161,17 +162,18 @@ func (g *Game) initPlatforms() {
 }
 
 func (g *Game) initButtons() {
-	g.startButton = NewImageButton(startButtonCenterX, startButtonCenterY, 187, 60, func() {
+	g.startButton = NewImageButton(startButtonCenterX, startButtonCenterY, 187, 60, 1, func() {
 		g.gameStarted = true
-	}, media.Instance.GetPlayButtonImage())
+	}, media.Instance.GetPlayButtonImage)
 
-	g.shareButton = NewImageButton(startButtonCenterX, 400, 360, 100, func() {
+	g.shareButton = NewImageButton(startButtonCenterX, 400, 360, 60, 1, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
-	}, media.Instance.GetShareButtonImage())
+		copiedSuccessCountdown = 120
+	}, GetShareButtonImage)
 
-	g.muteButton = NewImageButton(screenWidth-30, 30, 20, 20, func() {
+	g.muteButton = NewImageButton(screenWidth-30, 30, 24, 24, .5, func() {
 		ToggleMute()
-	}, media.Instance.GetPlayingImage())
+	}, GetMuteButtonImage)
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -188,6 +190,9 @@ func (g *Game) Update() error {
 		// If game over, reset the game when the enter key is pressed
 		if g.gameOver {
 			g.shareButton.Update()
+			if copiedSuccessCountdown > 0 {
+				copiedSuccessCountdown--
+			}
 			if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 				if g.player.x < g.getFirstPlatform().GetX() {
 					bot = true
@@ -316,6 +321,7 @@ func (g *Game) resetGameState() {
 	g.cameraX = 0
 	g.score = 0
 	g.gameOver = false
+	copiedSuccessCountdown = 0
 }
 
 func (g *Game) handlePlayer() {
@@ -568,7 +574,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.drawBotScreen(screen)
 		}
 	}
-	g.drawMuteButton(screen) // todo don't use this hacky way
+	g.muteButton.Draw(screen)
 	g.DrawAllText(screen)
 }
 
@@ -623,20 +629,10 @@ func (g *Game) drawTitle(screen *ebiten.Image) {
 	drawImage(screen, media.Instance.GetTitleImage(), screenWidth/2, screenHeight/2-50)
 }
 
-func drawImage(screen *ebiten.Image, image *ebiten.Image, centerX, centerY float64) {
-	titleOptions := &ebiten.DrawImageOptions{}
-	scaleX, scaleY := 1.0, 1.0
-	x := centerX - float64(image.Bounds().Dx()/2)
-	y := centerY - float64(image.Bounds().Dy()/2)
-	titleOptions.GeoM.Scale(scaleX, scaleY)
-	titleOptions.GeoM.Translate(x, y)
-	screen.DrawImage(image, titleOptions)
-}
-
 func (g *Game) drawGameOverScreen(screen *ebiten.Image) {
 	var restartImage *ebiten.Image
 	if g.isMobile {
-		restartImage = media.Instance.GetRestartButtonImage()
+		restartImage = media.Instance.GetMobileRestartButtonImage()
 	} else {
 		restartImage = media.Instance.GetRestartButtonImage()
 	}
@@ -672,15 +668,23 @@ func (g *Game) drawScore(screen *ebiten.Image) {
 	text.Draw(screen, "Rooftops Geocoded: "+strconv.Itoa(g.score), g.font, 10, 20, colorText)
 }
 
-// todo don't use this hacky way
-func (g *Game) drawMuteButton(screen *ebiten.Image) {
-	image := GetMuteButtonImage()
-	muteOptions := &ebiten.DrawImageOptions{}
-	scaleX := g.muteButton.width / float64(image.Bounds().Dx())
-	scaleY := g.muteButton.width / float64(image.Bounds().Dy())
-	muteOptions.GeoM.Scale(scaleX, scaleY)
-	muteOptions.GeoM.Translate(g.muteButton.x, g.muteButton.y)
-	screen.DrawImage(image, muteOptions)
+func (g *Game) DrawAllText(screen *ebiten.Image) {
+	if g.gameStarted {
+		g.drawGeocodes(screen)
+		g.drawScore(screen)
+	}
+}
+
+////////////////////////////////////////////////////////////////////////
+
+func drawImage(screen *ebiten.Image, image *ebiten.Image, centerX, centerY float64) {
+	titleOptions := &ebiten.DrawImageOptions{}
+	scaleX, scaleY := 1.0, 1.0
+	x := centerX - float64(image.Bounds().Dx()/2)
+	y := centerY - float64(image.Bounds().Dy()/2)
+	titleOptions.GeoM.Scale(scaleX, scaleY)
+	titleOptions.GeoM.Translate(x, y)
+	screen.DrawImage(image, titleOptions)
 }
 
 func GetMuteButtonImage() *ebiten.Image {
@@ -691,11 +695,10 @@ func GetMuteButtonImage() *ebiten.Image {
 	}
 }
 
-func (g *Game) DrawAllText(screen *ebiten.Image) {
-	if g.gameStarted {
-		g.drawGeocodes(screen)
-		g.drawScore(screen)
+func GetShareButtonImage() *ebiten.Image {
+	if copiedSuccessCountdown > 0 {
+		return media.Instance.GetCopyScoreSuccessButtonImage()
+	} else {
+		return media.Instance.GetCopyScorePromptButtonImage()
 	}
 }
-
-////////////////////////////////////////////////////////////////////////
