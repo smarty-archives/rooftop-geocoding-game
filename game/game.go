@@ -566,7 +566,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawBackgroundClouds(screen)
 		if g.gameOver {
 			if !bot {
-				g.shareButton.Draw(screen)
+				if !g.isMobile {
+					g.shareButton.Draw(screen)
+				}
 				g.drawGameOverScreen(screen)
 			}
 		}
