@@ -87,5 +87,23 @@ func IsMobile() bool {
 	}
 
 	ua := navigator.Get("userAgent").String()
-	return strings.Contains(ua, "Mobi") || strings.Contains(ua, "Android") || strings.Contains(ua, "iPhone")
+	ua = strings.ToLower(ua)
+	if strings.Contains(ua, "mobi") ||
+		strings.Contains(ua, "android") ||
+		strings.Contains(ua, "iphone") ||
+		strings.Contains(ua, "ipad") ||
+		strings.Contains(ua, "ipod") {
+		return true
+	}
+
+	// Check if it's a Mac with touch support (likely an iPad with desktop UA)
+	platform := navigator.Get("platform").String()
+	if strings.Contains(platform, "Mac") {
+		maxTouchPoints := navigator.Get("maxTouchPoints").Int()
+		if maxTouchPoints > 1 {
+			return true
+		}
+	}
+
+	return false
 }
