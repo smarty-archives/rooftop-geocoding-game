@@ -37,7 +37,7 @@ const (
 	gravity                = 0.7
 	heavyGravity           = 0.8
 
-	gameLink = "www.smarty.com/geocode-jumper"
+	gameLink = "https://www.smarty.com/geocode-jumper"
 )
 
 var (
