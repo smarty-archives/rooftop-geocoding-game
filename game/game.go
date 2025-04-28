@@ -93,7 +93,7 @@ func NewGame() *Game {
 			if !g.gameStarted {
 				g.gameStarted = true
 			} else if g.gameOver {
-				if g.shareButton.Overlaps(x, y) {
+				if g.shareButton.Overlaps(x, y) && !g.isMobile {
 					g.shareButton.buttonFn()
 				} else {
 					g.startOver()
@@ -189,9 +189,11 @@ func (g *Game) Update() error {
 
 		// If game over, reset the game when the enter key is pressed
 		if g.gameOver {
-			g.shareButton.Update()
-			if copiedSuccessCountdown > 0 {
-				copiedSuccessCountdown--
+			if !g.isMobile {
+				g.shareButton.Update()
+				if copiedSuccessCountdown > 0 {
+					copiedSuccessCountdown--
+				}
 			}
 			if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 				if g.player.x < g.getFirstPlatform().GetX() {
