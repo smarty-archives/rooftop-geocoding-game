@@ -15,10 +15,11 @@ type Button struct {
 	width, height    float64
 	buttonFn         func()
 	isPressed        bool
+	clickableMargin  float64
 	drawMoreStrategy ButtonDrawStrategy
 }
 
-func NewButton(centerX, centerY, width, height float64, btnFunc func()) *Button {
+func NewButton(centerX, centerY, width, height, clickableMargin float64, btnFunc func()) *Button {
 	return &Button{
 		Pos: Pos{
 			x: centerX - width/2,
@@ -27,18 +28,19 @@ func NewButton(centerX, centerY, width, height float64, btnFunc func()) *Button 
 		width:            width,
 		height:           height,
 		buttonFn:         btnFunc,
+		clickableMargin:  clickableMargin,
 		drawMoreStrategy: BaseStrategy{},
 	}
 }
 
 func NewTextButton(centerX, centerY, width, height float64, btnFunc func(), text string) *Button {
-	b := NewButton(centerX, centerY, width, height, btnFunc)
+	b := NewButton(centerX, centerY, width, height, 0, btnFunc)
 	b.drawMoreStrategy = NewTextStrategy(text)
 	return b
 }
 
-func NewImageButton(centerX, centerY, width, height, scale float64, btnFunc func(), imageFunc func() *ebiten.Image) *Button {
-	b := NewButton(centerX, centerY, width, height, btnFunc)
+func NewImageButton(centerX, centerY, width, height, scale, clickableMargin float64, btnFunc func(), imageFunc func() *ebiten.Image) *Button {
+	b := NewButton(centerX, centerY, width, height, clickableMargin, btnFunc)
 	b.drawMoreStrategy = NewImageStrategy(imageFunc, scale)
 	return b
 }
@@ -54,7 +56,10 @@ func (b *Button) getJustPressed() bool {
 func (b *Button) Overlaps(x32, y32 int) bool {
 	x := float64(x32)
 	y := float64(y32)
-	return x < b.x+b.width && x > b.x && y < b.y+b.height && y > b.y
+	return x < b.x+b.width+b.clickableMargin &&
+		x > b.x-b.clickableMargin &&
+		y < b.y+b.height+b.clickableMargin &&
+		y > b.y-b.clickableMargin
 }
 
 func (b *Button) getIsPressed() bool {

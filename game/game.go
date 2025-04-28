@@ -162,16 +162,16 @@ func (g *Game) initPlatforms() {
 }
 
 func (g *Game) initButtons() {
-	g.startButton = NewImageButton(startButtonCenterX, startButtonCenterY, 187, 60, 1, func() {
+	g.startButton = NewImageButton(startButtonCenterX, startButtonCenterY, 187, 60, 1, 0, func() {
 		g.gameStarted = true
 	}, media.Instance.GetPlayButtonImage)
 
-	g.shareButton = NewImageButton(startButtonCenterX, 400, 360, 60, 1, func() {
+	g.shareButton = NewImageButton(startButtonCenterX, 400, 360, 60, 1, 0, func() {
 		clipboard.CopyToClipboard(fmt.Sprintf("I scored %d on Geocode Jumper!\nTry to beat me\n%s", g.score, gameLink))
 		copiedSuccessCountdown = 120
 	}, GetShareButtonImage)
 
-	g.muteButton = NewImageButton(screenWidth-30, 30, 24, 24, .5, func() {
+	g.muteButton = NewImageButton(screenWidth-30, 30, 24, 24, .5, 20, func() {
 		ToggleMute()
 	}, GetMuteButtonImage)
 }
